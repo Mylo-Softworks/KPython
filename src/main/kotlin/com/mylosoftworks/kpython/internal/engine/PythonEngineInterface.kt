@@ -35,16 +35,20 @@ internal interface PythonEngineInterface : Library {
 
     // PyRun_
     fun PyRun_SimpleString(code: String): Int
-    fun PyRun_String(code: String, start: Int, globals: PyObject, locals: PyObject): PyObject
+    fun PyRun_String(code: String, start: Int, globals: PyObject, locals: PyObject): PyObject?
 
     // Values
     // https://docs.python.org/3/c-api/arg.html#c.Py_BuildValue
-    fun Py_BuildValue(format: String, vararg value: Any): PyObject
-    fun PyLong_AsLong(obj: PyObject): Long
+    fun Py_BuildValue(format: String, vararg value: Any): PyObject?
+    fun PyLong_Check(obj: PyObject): Boolean
+    fun PyLong_AsLongLong(obj: PyObject): Long
+    fun PyFloat_Check(obj: PyObject): Boolean
     fun PyFloat_AsDouble(obj: PyObject): Double
     fun PyUnicode_AsUTF8(obj: PyObject): String
     fun PyObject_IsTrue(obj: PyObject): Boolean
     fun PyObject_IsFalse(obj: PyObject): Boolean
+
+//    fun Py_GetConstant(id: Int): PyObject // 3.13 and higher
 
     // builtins, globals, locals
     fun PyEval_GetBuiltins(): PyObject
@@ -62,28 +66,62 @@ internal interface PythonEngineInterface : Library {
     fun PyDict_SetItemString(p: PyObject, key: String, value: PyObject): Boolean
     fun PyDict_DelItem(p: PyObject, key: PyObject): Boolean
     fun PyDict_DelItemString(p: PyObject, key: String): Boolean
-    fun PyDict_GetItem(p: PyObject, key: PyObject): PyObject
-    fun PyDict_GetItemWithError(p: PyObject, key: PyObject): PyObject
-    fun PyDict_GetItemString(p: PyObject, key: String): PyObject
-    fun PyDict_SetDefault(p: PyObject, key: PyObject, defaultObject: PyObject): PyObject
-    fun PyDict_Items(p: PyObject): PyObject
-    fun PyDict_Keys(p: PyObject): PyObject
-    fun PyDict_Values(p: PyObject): PyObject
+    fun PyDict_GetItem(p: PyObject, key: PyObject): PyObject?
+    fun PyDict_GetItemWithError(p: PyObject, key: PyObject): PyObject?
+    fun PyDict_GetItemString(p: PyObject, key: String): PyObject?
+    fun PyDict_SetDefault(p: PyObject, key: PyObject, defaultObject: PyObject): PyObject?
+    fun PyDict_Items(p: PyObject): PyObject?
+    fun PyDict_Keys(p: PyObject): PyObject?
+    fun PyDict_Values(p: PyObject): PyObject?
     fun PyDict_Size(p: PyObject): Py_ssize_t
 
     // lists
 
-    fun PyList_Check(): Boolean
-    fun PyList_CheckExact(): Boolean
-    fun PyList_new(len: Py_ssize_t): PyObject
+    fun PyList_Check(p: PyObject): Boolean
+    fun PyList_CheckExact(p: PyObject): Boolean
+    fun PyList_new(len: Py_ssize_t = 0L): PyObject?
     fun PyList_Size(list: PyObject): Py_ssize_t
     fun PyList_GET_SIZE(list: PyObject): Py_ssize_t
-    fun PyList_GetItem(list: PyObject, index: Py_ssize_t): PyObject
-    fun PyList_GET_ITEM(list: PyObject, index: Py_ssize_t): PyObject
+    fun PyList_GetItem(list: PyObject, index: Py_ssize_t): PyObject?
+    fun PyList_GET_ITEM(list: PyObject, index: Py_ssize_t): PyObject?
     fun PyList_SetItem(list: PyObject, index: Py_ssize_t, item: PyObject): Boolean
     fun PyList_SET_ITEM(list: PyObject, index: Py_ssize_t, item: PyObject): Boolean
     fun PyList_Insert(list: PyObject, index: Py_ssize_t, item: PyObject): Boolean
     fun PyList_Append(list: PyObject, item: PyObject): Boolean
+
+    // python functions
+    fun PyFunction_Check(p: PyObject): Boolean
+    fun PyFunction_New(code: PyObject, globals: PyObject): PyObject?
+    fun PyFunction_NewWithQualName(code: PyObject, globals: PyObject, qualname: PyObject): PyObject?
+    fun PyFunction_GetCode(op: PyObject): PyObject
+
+    // c functions
+
+
+    // objects
+    fun PyObject_HasAttr(o: PyObject, attr_name: PyObject): Boolean
+    fun PyObject_HasAttrString(o: PyObject, attr_name: String): Boolean
+    fun PyObject_Dir(o: PyObject): PyObject?
+    fun PyObject_GetAttr(o: PyObject, attr_name: PyObject): PyObject?
+    fun PyObject_GetAttrString(o: PyObject, attr_name: String): PyObject?
+    fun PyObject_SetAttr(o: PyObject, attr_name: PyObject, attr_value: PyObject): Int
+    fun PyObject_SetAttrString(o: PyObject, attr_name: String, attr_value: PyObject): Int
+    fun PyObject_DelAttr(o: PyObject, attr_name: PyObject): Int
+    fun PyObject_DelAttrString(o: PyObject, attr_name: String): Int
+    fun PyObject_Str(o: PyObject): PyObject?
+
+    // function calling (https://docs.python.org/3/c-api/call.html)
+    fun PyCallable_Check(o: PyObject): Boolean
+    fun PyObject_Call(callable: PyObject, args: PyObject, kwargs: PyObject): PyObject?
+    fun PyObject_CallNoArgs(callable: PyObject): PyObject?
+    fun PyObject_CallOneArg(callable: PyObject, arg: PyObject): PyObject?
+    fun PyObject_CallObject(callable: PyObject, args: PyObject?): PyObject?
+    fun PyObject_CallFunction(callable: PyObject, format: String, vararg args: Any): PyObject? // https://docs.python.org/3/c-api/call.html#c.PyObject_CallFunction
+    fun PyObject_CallMethod(obj: PyObject, name: String, format: String, vararg args: Any): PyObject?
+    fun PyObject_CallFunctionObjArgs(callable: PyObject, vararg args: PyObject): PyObject?
+    fun PyObject_CallMethodObjArgs(callable: PyObject, name: PyObject, vararg args: PyObject): PyObject?
+    fun PyObject_CallMethodNoArgs(callable: PyObject, name: PyObject): PyObject?
+    fun PyObject_CallMethodOneArg(callable: PyObject, name: PyObject, arg: PyObject): PyObject?
 
 
     companion object // Uses extension methods just in case
