@@ -233,7 +233,8 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
     fun createFunction(self: PythonProxyObject? = null, name: String = "", doc: String = "", function: FunctionCallParams.() -> Any?): PyCallable? {
         val callback = PyKotlinFunction(this, function)
         val functionStruct = PythonEngineInterface.PyMethodDef.ByReference(name, callback, METH_VARARGS, doc)
-        return engine.PyCFunction_New(functionStruct, self?.obj ?: Str.asInterface<PyClass>().invoke()!!.obj)?.asProxyObject()?.asInterface<PyCallable>()
+        return engine.PyCFunction_New(functionStruct, self?.obj ?: Str.asInterface<PyClass>().invoke()!!.obj)
+            ?.let { createProxyObject(it, GCBehavior.ONLY_DEC).asInterface<PyCallable>() }
     }
 
     fun createFunctionUnit(self: PythonProxyObject? = null, name: String = "", doc: String = "", function: FunctionCallParams.() -> Unit): PyCallable? {

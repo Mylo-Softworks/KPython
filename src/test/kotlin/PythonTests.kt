@@ -8,36 +8,6 @@ import org.junit.jupiter.api.Test
 
 class PythonTests {
     @Test
-    fun pythonLibBasicTest() {
-        val pythonLib = PythonEngineInterface.initialize(PythonVersion.python310)
-        pythonLib.Py_Initialize()
-
-        val globals = pythonLib.PyDict_New()
-        val locals = pythonLib.PyDict_New()
-
-        pythonLib.PyDict_SetItemString(globals, "test", pythonLib.Py_BuildValue("s", "value")!!)
-
-        val size = pythonLib.PyDict_Size(globals)
-        println(size)
-
-        val result = pythonLib.Py_BuildValue("s", "This is a test")
-        println(pythonLib.PyUnicode_AsUTF8(result!!))
-
-//        pythonLib.PyDict_SetItemString(globals, "message", result) // message = result
-//        pythonLib.PyRun_String("print(message)", StartSymbol.File.value, globals, locals)
-
-//        val result = pythonLib.PyRun_SimpleString("""
-//
-//            import sys
-//            print(sys.version)
-//
-//            """.trimIndent())
-
-
-        pythonLib.Py_Finalize()
-    }
-
-    @Test
     fun confirmValues() {
         val pythonLib = PythonEngineInterface.initialize(PythonVersion.python312)
         pythonLib.Py_Initialize()

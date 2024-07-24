@@ -21,10 +21,13 @@ interface PyDict : KPythonProxy {
     operator fun set(key: Any, value: Any)
 
     @DontUsePython
-    fun createMethod(name: String, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Any?)
+    fun createMethod(name: Any, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Any?)
 
     @DontUsePython
-    fun createMethodUnit(name: String, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Unit)
+    fun createMethodUnit(name: Any, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Unit)
+
+    @DontUsePython
+    fun invokeMethod(key: Any, vararg args: Any): PythonProxyObject?
 
     companion object {
         fun getSize(self: PythonProxyObject): Long {
@@ -49,14 +52,18 @@ interface PyDict : KPythonProxy {
             }
         }
 
-        fun createMethod(self: PythonProxyObject, name: String, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Any?) {
-            val method = self.env.createFunction(self, name, docs, code)!!
+        fun createMethod(self: PythonProxyObject, name: Any, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Any?) {
+            val method = self.env.createFunction(self, name.toString(), docs, code)!!
             set(self, name, method.getKPythonProxyBase())
         }
 
-        fun createMethodUnit(self: PythonProxyObject, name: String, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Unit) {
-            val method = self.env.createFunctionUnit(self, name, docs, code)!!
+        fun createMethodUnit(self: PythonProxyObject, name: Any, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Unit) {
+            val method = self.env.createFunctionUnit(self, name.toString(), docs, code)!!
             set(self, name, method.getKPythonProxyBase())
+        }
+
+        fun invokeMethod(self: PythonProxyObject, key: Any, vararg args: Any): PythonProxyObject? {
+            return self.asInterface<PyDict>()[key]!!.asInterface<PyCallable>()(*args)
         }
     }
 }

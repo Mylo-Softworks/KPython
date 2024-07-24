@@ -61,4 +61,18 @@ class KPythonTests {
 
         assert(test.reversed() == result.toString())
     }
+
+    @Test
+    fun addKotlinFunction() {
+        val env = PyEnvironment(PythonVersion.python312)
+
+        val compString = "Abracadabra"
+
+        env.globals.createMethod("get_kotlin_string") {
+            compString
+        }
+
+        val returnValue = env.globals.invokeMethod("get_kotlin_string")!!.toJvmRepresentation<String>()
+        assert(compString == returnValue)
+    }
 }

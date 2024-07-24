@@ -139,7 +139,7 @@ internal interface PythonEngineInterface : Library {
 }
 
 internal fun PythonEngineInterface.Companion.initialize(pythonVersion: PythonVersion, pythonPath: String? = null): PythonEngineInterface {
-    return initialize(pythonVersion.verName, pythonPath)
+    return initialize(pythonVersion.toString(), pythonPath)
 }
 
 internal fun PythonEngineInterface.Companion.initialize(pythonVersion: String, pythonPath: String? = null): PythonEngineInterface {
