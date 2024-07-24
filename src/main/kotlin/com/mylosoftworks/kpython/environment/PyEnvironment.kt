@@ -7,8 +7,10 @@ import com.mylosoftworks.kpython.internal.engine.PythonEngineInterface
 import com.mylosoftworks.kpython.internal.engine.StartSymbol
 import com.mylosoftworks.kpython.internal.engine.initialize
 import com.mylosoftworks.kpython.internal.engine.pythondefs.PyObject
+import com.mylosoftworks.kpython.proxy.GCBehavior
 import com.mylosoftworks.kpython.proxy.KPythonProxy
 import com.mylosoftworks.kpython.proxy.PythonProxyObject
+import java.nio.file.Paths
 
 /**
  * Represents a python environment, only one can exist at a time per process currently.
@@ -16,32 +18,32 @@ import com.mylosoftworks.kpython.proxy.PythonProxyObject
 class PyEnvironment internal constructor(internal val engine: PythonEngineInterface) {
 
     // Constants TODO: Find a better way to get these
-    lateinit var None: PythonProxyObject
-    lateinit var True: PythonProxyObject
-    lateinit var False: PythonProxyObject
-    lateinit var EmptyList: PythonProxyObject
-    lateinit var EmptyDict: PythonProxyObject
-    lateinit var EmptyTuple: PythonProxyObject
-    lateinit var Ellipsis: PythonProxyObject
+    var None: PythonProxyObject
+    var True: PythonProxyObject
+    var False: PythonProxyObject
+    var EmptyList: PythonProxyObject
+    var EmptyDict: PythonProxyObject
+    var EmptyTuple: PythonProxyObject
+    var Ellipsis: PythonProxyObject
 
     // Types TODO: Find a better way to get these
-    lateinit var Str: PythonProxyObject
-    lateinit var Int: PythonProxyObject
-    lateinit var Float: PythonProxyObject
-    lateinit var List: PythonProxyObject
-    lateinit var Dict: PythonProxyObject
-    lateinit var Tuple: PythonProxyObject
+    var Str: PythonProxyObject
+    var Int: PythonProxyObject
+    var Float: PythonProxyObject
+    var List: PythonProxyObject
+    var Dict: PythonProxyObject
+    var Tuple: PythonProxyObject
 
-    lateinit var globals: PyDict
-    lateinit var locals: PyDict
+    var globals: PyDict
+    var locals: PyDict
 
     init {
         engine.Py_Initialize()
 
-        globals = engine.PyDict_New().asProxyObject().asInterface<PyDict>()!!
-        locals = engine.PyDict_New().asProxyObject().asInterface<PyDict>()!!
+        globals = createProxyObject(engine.PyDict_New(), GCBehavior.ONLY_DEC).asInterface<PyDict>()
+        locals = createProxyObject(engine.PyDict_New(), GCBehavior.ONLY_DEC).asInterface<PyDict>()
 
-        None = eval("None")!!
+        None = evalGC("None", gcBehavior = GCBehavior.IGNORE)!!
         True = eval("True")!!
         False = eval("False")!!
         EmptyList = eval("[]")!!
@@ -74,6 +76,11 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
      */
     fun eval(script: String, globals: PyDict = this.globals, locals: PyDict = this.locals): PythonProxyObject? {
         return engine.PyRun_String(script, StartSymbol.Eval.value, locals.getKPythonProxyBase().obj, globals.getKPythonProxyBase().obj)?.asProxyObject()
+    }
+
+    internal fun evalGC(script: String, globals: PyDict = this.globals, locals: PyDict = this.locals, gcBehavior: GCBehavior = GCBehavior.FULL): PythonProxyObject? {
+        return engine.PyRun_String(script, StartSymbol.Eval.value, locals.getKPythonProxyBase().obj, globals.getKPythonProxyBase().obj)
+            ?.let { createProxyObject(it, gcBehavior) }
     }
 
     /**
@@ -168,7 +175,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         items.forEach {
             engine.PyList_Append(list ?: EmptyList.obj, convertTo(it)?.obj ?: None.obj)
         }
-        return createProxyObject(list ?: EmptyList.obj).asInterface<PyList>()
+        return createProxyObject(list ?: EmptyList.obj, GCBehavior.ONLY_DEC).asInterface<PyList>()
     }
 
     private fun createDict(items: HashMap<*, *>): PyDict {
@@ -176,7 +183,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         items.forEach {
             engine.PyDict_SetItem(dict, convertTo(it.key)?.obj ?: None.obj, convertTo(it.value)?.obj ?: None.obj)
         }
-        return createProxyObject(dict).asInterface<PyDict>()
+        return createProxyObject(dict, GCBehavior.ONLY_DEC).asInterface<PyDict>()
     }
 
     private fun readArray(pyObject: PyObject, itemType: Class<*> = PythonProxyObject::class.java): Array<Any?> {
@@ -194,12 +201,16 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 
     private fun PyObject.asProxyObject(): PythonProxyObject = createProxyObject(this)
 
-    internal fun createProxyObject(rawValue: PyObject): PythonProxyObject {
-        return PythonProxyObject(this, rawValue)
+    fun createProxyObject(rawValue: PyObject): PythonProxyObject {
+        return createProxyObject(rawValue, GCBehavior.FULL)
+    }
+
+    internal fun createProxyObject(rawValue: PyObject, gcBehavior: GCBehavior = GCBehavior.FULL): PythonProxyObject {
+        return PythonProxyObject(this, rawValue, gcBehavior)
     }
 
     private fun manualConvert(input: Any, type: String): PythonProxyObject? {
-        return engine.Py_BuildValue(type, input)?.let { createProxyObject(it) }
+        return engine.Py_BuildValue(type, input)?.let { createProxyObject(it, GCBehavior.ONLY_DEC) }
     }
 
     // Creation functions
@@ -237,7 +248,27 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
     }
 
     fun getDefDict(type: DefType): PyDict {
-        return type.func(engine).asProxyObject().asInterface<PyDict>()
+        return createProxyObject(type.func(engine), GCBehavior.IGNORE).asInterface<PyDict>() // Borrowed
+    }
+
+    // Common functions
+    fun import(name: String): PythonProxyObject? {
+        return engine.PyImport_ImportModule(name)?.asProxyObject()
+    }
+
+    inline fun <reified T: KPythonProxy> import(name: String): T? {
+        return import(name)?.asInterface<T>()
+    }
+
+    fun setFakeFileDir(dir: String, fileName: String = "fake_file.py", globals: PyDict? = null) {
+        // Set path
+        val path = engine.PySys_GetObject("path")!!
+        val d = engine.PyUnicode_DecodeFSDefault(dir)
+        engine.PyList_Insert(path, 0, d)
+        engine.Py_DecRef(d)
+
+        // Set __file__
+        (globals ?: this.globals)["__file__"] = convertTo(Paths.get(dir, fileName))!!
     }
 }
 

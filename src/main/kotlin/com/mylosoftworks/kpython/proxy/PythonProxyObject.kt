@@ -4,10 +4,24 @@ import com.mylosoftworks.kpython.environment.PyEnvironment
 import com.mylosoftworks.kpython.internal.engine.pythondefs.PyObject
 import java.lang.reflect.Proxy
 
+internal enum class GCBehavior {
+    FULL, ONLY_DEC, IGNORE
+}
+
 /**
  * Represents an unknown python object in kotlin
  */
-open class PythonProxyObject internal constructor(val env: PyEnvironment, val obj: PyObject) {
+open class PythonProxyObject internal constructor(val env: PyEnvironment, val obj: PyObject, internal val gcBehavior: GCBehavior) {
+    init {
+        if (gcBehavior == GCBehavior.FULL) env.engine.Py_IncRef(obj)
+    }
+
+    fun finalize() {
+        if (gcBehavior == GCBehavior.IGNORE) return
+
+        env.engine.Py_DecRef(obj)
+    }
+
     inline fun <reified T: KPythonProxy> asInterface(): T {
         return asInterface(T::class.java) as T
     }

@@ -16,7 +16,7 @@ interface PyCallable : KPythonProxy {
             self.let {
                 val argsVal = if (args.isEmpty()) null else it.env.convertArgs(*args)?.obj
                 return it.env.engine.PyObject_CallObject(it.obj, argsVal)
-                    ?.let { it1 -> PythonProxyObject(it.env, it1) }
+                    ?.let { it1 -> it.env.createProxyObject(it1) }
             }
         }
     }

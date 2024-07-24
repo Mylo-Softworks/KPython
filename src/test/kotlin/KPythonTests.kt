@@ -3,8 +3,8 @@ import com.mylosoftworks.kpython.environment.PyEnvironment
 import com.mylosoftworks.kpython.environment.pythonobjects.PyCallable
 import com.mylosoftworks.kpython.environment.pythonobjects.PyClass
 import com.mylosoftworks.kpython.environment.pythonobjects.createTyped
+import com.mylosoftworks.kpython.proxy.KPythonProxy
 import org.junit.jupiter.api.Test
-import kotlin.system.exitProcess
 
 // Tests which use KPython at a user-level
 class KPythonTests {
@@ -50,27 +50,15 @@ class KPythonTests {
     fun testCallbacks() {
         val env = PyEnvironment(PythonVersion.python312)
 
-        env.globals["print"] = env.createFunctionUnit {
+        val test = "This is a test!"
+
+        val reverseFunction = env.createFunction {
             val (arg1) = args
-            println("Printing from kotlin: $arg1")
-        }!!
+            return@createFunction arg1.toString().reversed()
+        }
 
-        env.file("""
-            print("Hello, world!")
-        """.trimIndent())
+        val result = reverseFunction?.invoke(test)
 
-//        var test = "This is a test!"
-//        val function = env.createFunction {
-//            test = "Changed test!"
-//            return@createFunction env.convertTo("This is a test!")
-//        }
-//
-//        val result = function?.invoke()
-//
-//        println(result)
-//
-//        println(test)
-//
-//        function2?.invoke()
+        assert(test.reversed() == result.toString())
     }
 }

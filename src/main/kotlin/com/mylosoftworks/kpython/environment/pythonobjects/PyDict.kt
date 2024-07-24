@@ -1,5 +1,6 @@
 package com.mylosoftworks.kpython.environment.pythonobjects
 
+import com.mylosoftworks.kpython.environment.PyEnvironment
 import com.mylosoftworks.kpython.proxy.DontUsePython
 import com.mylosoftworks.kpython.proxy.KPythonProxy
 import com.mylosoftworks.kpython.proxy.PythonProxyObject
@@ -17,6 +18,12 @@ interface PyDict : KPythonProxy {
 
     @DontUsePython
     operator fun set(key: Any, value: Any)
+
+    @DontUsePython
+    fun createMethod(name: String, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Any?)
+
+    @DontUsePython
+    fun createMethodUnit(name: String, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Unit)
 
     companion object {
         fun getSize(self: PythonProxyObject): Long {
@@ -39,6 +46,16 @@ interface PyDict : KPythonProxy {
             self.let {
                 it.env.engine.PyDict_SetItem(it.obj, it.env.convertTo(key)!!.obj, it.env.convertTo(value)!!.obj)
             }
+        }
+
+        fun createMethod(self: PythonProxyObject, name: String, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Any?) {
+            val method = self.env.createFunction(self, name, docs, code)!!
+            set(self, name, method.getKPythonProxyBase())
+        }
+
+        fun createMethodUnit(self: PythonProxyObject, name: String, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Unit) {
+            val method = self.env.createFunctionUnit(self, name, docs, code)!!
+            set(self, name, method.getKPythonProxyBase())
         }
     }
 }

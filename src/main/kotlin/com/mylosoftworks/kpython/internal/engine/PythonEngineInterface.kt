@@ -46,6 +46,7 @@ internal interface PythonEngineInterface : Library {
     fun PyLong_AsLongLong(obj: PyObject): Long
     fun PyFloat_AsDouble(obj: PyObject): Double
     fun PyUnicode_AsUTF8(obj: PyObject): String
+    fun PyUnicode_DecodeFSDefault(str: String): PyObject
     fun PyObject_IsTrue(obj: PyObject): Boolean
     fun PyObject_IsFalse(obj: PyObject): Boolean
 
@@ -123,6 +124,16 @@ internal interface PythonEngineInterface : Library {
     fun PyObject_CallMethodNoArgs(callable: PyObject, name: PyObject): PyObject?
     fun PyObject_CallMethodOneArg(callable: PyObject, name: PyObject, arg: PyObject): PyObject?
 
+    // Modules
+    fun PyImport_ImportModule(name: String): PyObject?
+
+    // Refcounting
+    fun Py_IncRef(o: PyObject)
+    fun Py_DecRef(o: PyObject)
+
+    // Sys
+    fun PySys_GetObject(name: String): PyObject? // Borrowed
+    fun PySys_SetObject(name: String, value: PyObject): Int
 
     companion object // Uses extension methods just in case
 }
