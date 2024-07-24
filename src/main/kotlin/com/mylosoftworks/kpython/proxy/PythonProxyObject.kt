@@ -5,7 +5,9 @@ import com.mylosoftworks.kpython.internal.engine.pythondefs.PyObject
 import java.lang.reflect.Proxy
 
 internal enum class GCBehavior {
-    FULL, ONLY_DEC, IGNORE
+    FULL, // Copied in Kotlin, created objects shouldn't have FULL as the refcount is 1 when an object is created
+    ONLY_DEC, // Created in CPython
+    IGNORE // Borrowed, or constant value
 }
 
 /**

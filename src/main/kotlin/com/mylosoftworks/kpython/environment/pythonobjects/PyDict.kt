@@ -2,6 +2,7 @@ package com.mylosoftworks.kpython.environment.pythonobjects
 
 import com.mylosoftworks.kpython.environment.PyEnvironment
 import com.mylosoftworks.kpython.proxy.DontUsePython
+import com.mylosoftworks.kpython.proxy.GCBehavior
 import com.mylosoftworks.kpython.proxy.KPythonProxy
 import com.mylosoftworks.kpython.proxy.PythonProxyObject
 
@@ -36,7 +37,7 @@ interface PyDict : KPythonProxy {
             return self.let {
                 it.env.engine.PyDict_GetItem(it.obj, it.env.convertTo(key)!!.obj)?.let { it1 ->
                     it.env.createProxyObject(
-                        it1
+                        it1, GCBehavior.IGNORE // Borrowed
                     )
                 }
             }

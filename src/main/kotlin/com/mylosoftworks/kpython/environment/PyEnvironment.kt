@@ -149,6 +149,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
             is Long -> manualConvert(input, "L")
             is Int -> manualConvert(input, "i")
             is Boolean -> manualConvert(if (input) True else False, "b")
+            is Array<*> -> createList(*(input as Array<Any>))?.getKPythonProxyBase()
             else -> None
         }
     }
@@ -215,11 +216,11 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 
     // Creation functions
     fun createTuple(vararg args: Any): PyTuple? {
-        return convertArgs(args)?.asInterface<PyTuple>()
+        return convertArgs(*args)?.asInterface<PyTuple>()
     }
 
     fun createList(vararg args: Any): PyList? {
-        return convertArgs(args, "[", "]")?.asInterface<PyList>()
+        return convertArgs(*args, prefix = "[", postfix = "]")?.asInterface<PyList>()
     }
 
     data class FunctionCallParams(val self: PythonProxyObject?, val args: PyTuple, val env: PyEnvironment)
@@ -262,13 +263,48 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 
     fun setFakeFileDir(dir: String, fileName: String = "fake_file.py", globals: PyDict? = null) {
         // Set path
-        val path = engine.PySys_GetObject("path")!!
+        val path = engine.PySys_GetObject("path")!! // Borrowed
         val d = engine.PyUnicode_DecodeFSDefault(dir)
         engine.PyList_Insert(path, 0, d)
         engine.Py_DecRef(d)
 
         // Set __file__
         (globals ?: this.globals)["__file__"] = convertTo(Paths.get(dir, fileName))!!
+    }
+
+    fun setArgv(fileName: String = "fake_file.py", vararg args: String) {
+        val allArgs = args.toMutableList().apply { add(0, fileName) }.toTypedArray()
+        engine.PySys_SetObject("argv", convertTo(allArgs)!!.obj)
+    }
+
+    fun getArgv(): List<String>? {
+        val argv = engine.PySys_GetObject("argv") ?: return null
+        val proxy = createProxyObject(argv, GCBehavior.IGNORE).asInterface<PyList>() // Borrowed
+        return List(proxy.size().toInt()) {
+            proxy[it].toString()
+        }
+    }
+
+    /**
+     * Get a sys variable, borrowed, so python refcount is not affected
+     */
+    inline fun <reified T> getSys(name: String): T? {
+        return getSys(name)?.let { convertFrom(it, T::class.java) } as T?
+    }
+
+    /**
+     * Get a sys variable, borrowed, so python refcount is not affected
+     */
+    fun getSys(name: String): PythonProxyObject? {
+        return engine.PySys_GetObject(name)?.let { createProxyObject(it, GCBehavior.IGNORE) } // Borrowed
+    }
+
+    /**
+     * Set a sys variable, value is converted unless already PythonProxyObject/KPythonProxy
+     */
+    fun setSys(name: String, value: Any) {
+        val converted = convertTo(value) ?: return
+        engine.PySys_SetObject(name, converted.obj)
     }
 }
 
