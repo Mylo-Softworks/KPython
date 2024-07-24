@@ -66,11 +66,15 @@ class PythonTests {
                
                 def another_function(self):
                     return "Called another_function!"
+                    
+            def function_test():
+                return "Function test was called!"
         """.trimIndent()
 
         pythonLib.PyRun_String(functionDef, StartSymbol.File.value, globals, locals)
 
         val testClass = pythonLib.PyDict_GetItemString(locals, "Test") // Get the test class
+        val testFunction = pythonLib.PyDict_GetItemString(locals, "function_test") // Get the test class
 
 
         val instance = pythonLib.PyObject_CallObject(testClass!!, null) // Create Test object
@@ -81,6 +85,9 @@ class PythonTests {
         val anotherFunction = pythonLib.PyObject_GetAttrString(instance, "another_function") // instance.another_function
         val result3 = pythonLib.PyObject_CallObject(anotherFunction!!, null) // instance.another_function()
         assert(pythonLib.PyUnicode_AsUTF8(result3!!) == "Called another_function!")
+
+        val result4 = pythonLib.PyObject_CallObject(testFunction!!, null)
+        assert(pythonLib.PyUnicode_AsUTF8(result4!!) == "Function test was called!")
 
         pythonLib.Py_Finalize()
     }

@@ -27,11 +27,7 @@ internal interface PythonEngineInterface : Library {
     fun Py_IsNone(x: PyObject): Boolean
     fun Py_IsTrue(x: PyObject): Boolean
     fun Py_IsFalse(x: PyObject): Boolean
-    fun Py_TYPE(o: PyObject): PyTypeObject
-    fun Py_IS_TYPE(o: PyObject, type: PyTypeObject): Boolean
-    fun Py_SET_TYPE(o: PyObject, type: PyTypeObject)
-    fun Py_SIZE(o: PyObject): Py_ssize_t
-    fun Py_SET_SIZE(o: PyObject, size: Py_ssize_t)
+    fun PyObject_IsInstance(inst: PyObject, cls: PyObject): Boolean
 
     // PyRun_
     fun PyRun_SimpleString(code: String): Int
@@ -40,9 +36,7 @@ internal interface PythonEngineInterface : Library {
     // Values
     // https://docs.python.org/3/c-api/arg.html#c.Py_BuildValue
     fun Py_BuildValue(format: String, vararg value: Any): PyObject?
-    fun PyLong_Check(obj: PyObject): Boolean
     fun PyLong_AsLongLong(obj: PyObject): Long
-    fun PyFloat_Check(obj: PyObject): Boolean
     fun PyFloat_AsDouble(obj: PyObject): Double
     fun PyUnicode_AsUTF8(obj: PyObject): String
     fun PyObject_IsTrue(obj: PyObject): Boolean

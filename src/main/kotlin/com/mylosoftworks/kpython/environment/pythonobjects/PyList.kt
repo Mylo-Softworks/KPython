@@ -1,6 +1,5 @@
 package com.mylosoftworks.kpython.environment.pythonobjects
 
-import com.mylosoftworks.kpython.proxy.DontForward
 import com.mylosoftworks.kpython.proxy.KPythonProxy
 import com.mylosoftworks.kpython.proxy.PythonProxyObject
 
@@ -16,6 +15,5 @@ interface PyList : KPythonProxy {
     fun reverse()
     fun sort(reverse: Boolean = false, key: ((Any?) -> Int)? = null)
     fun index(key: Int): PythonProxyObject
-    @DontForward
     operator fun get(key: Int): PythonProxyObject = index(key)
 }

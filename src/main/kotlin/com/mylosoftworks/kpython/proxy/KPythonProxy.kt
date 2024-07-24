@@ -6,4 +6,6 @@ interface KPythonProxy {
      */
     @GetBaseProxy
     fun getKPythonProxyBase(): PythonProxyObject
+
+    val __class__: PythonProxyObject
 }

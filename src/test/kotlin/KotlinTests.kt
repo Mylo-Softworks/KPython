@@ -8,7 +8,7 @@ class KotlinTests {
     fun testPropertyDetection() {
         for (f in PropertyAndFunctionsTestObject::class.java.declaredMethods) {
             if (f.name.contains("Function") || f.name.contains("Property")){
-                assert(f.name.contains("Property") == isPropertyAccessor(f, PropertyAndFunctionsTestObject::class)) { f.name }
+                assert(f.name.contains("Property") == isPropertyAccessor(f)) { f.name }
             }
         }
     }
