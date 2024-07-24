@@ -3,7 +3,6 @@ package com.mylosoftworks.kpython.proxy
 import com.mylosoftworks.kpython.environment.PyEnvironment
 import com.mylosoftworks.kpython.internal.engine.pythondefs.PyObject
 import java.lang.reflect.Proxy
-import java.util.Dictionary
 
 /**
  * Represents an unknown python object in kotlin
@@ -28,6 +27,16 @@ open class PythonProxyObject internal constructor(val env: PyEnvironment, val ob
     fun invokeMethod(key: String, vararg params: Any): PythonProxyObject? {
         val method = this[key]!!.obj
         return env.engine.PyObject_CallObject(method, env.convertArgs(*params)?.obj)?.let { env.createProxyObject(it) }
+    }
+
+    fun createMethod(name: String, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Any?) {
+        val method = env.createFunction(this, name, docs, code)!!
+        set(name, method.getKPythonProxyBase())
+    }
+
+    fun createMethodUnit(name: String, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Unit) {
+        val method = env.createFunctionUnit(this, name, docs, code)!!
+        set(name, method.getKPythonProxyBase())
     }
 
     inline fun <reified T> toJvmRepresentation(): T? {

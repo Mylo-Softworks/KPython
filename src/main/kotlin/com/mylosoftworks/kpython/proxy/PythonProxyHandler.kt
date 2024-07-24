@@ -1,7 +1,6 @@
 package com.mylosoftworks.kpython.proxy
 
 import com.mylosoftworks.kpython.environment.pythonobjects.PyCallable
-import com.mylosoftworks.kpython.environment.pythonobjects.PyDict
 import com.mylosoftworks.kpython.internal.utils.getKotlinMember
 import com.mylosoftworks.kpython.internal.utils.isPropertyAccessor
 import com.mylosoftworks.kpython.internal.utils.isPropertySetter
@@ -69,6 +68,7 @@ class PythonProxyHandler internal constructor(val obj: PythonProxyObject) : Invo
         else {
             // Method, invoke
             val methodName = getKotlinMember(method)!!.left!!.name
+            if (methodName == "toString") return obj.toString() // Failsafe
             return obj.invokeMethod(methodName, *argsSafe)?.let { obj.env.convertFrom(it, method.returnType) } ?: obj.env.None
         }
     }

@@ -1,8 +1,8 @@
 package com.mylosoftworks.kpython.environment
 
 import com.mylosoftworks.kpython.PythonVersion
-import com.mylosoftworks.kpython.environment.pythonobjects.PyDict
-import com.mylosoftworks.kpython.environment.pythonobjects.PyList
+import com.mylosoftworks.kpython.environment.pythonobjects.*
+import com.mylosoftworks.kpython.internal.engine.METH_VARARGS
 import com.mylosoftworks.kpython.internal.engine.PythonEngineInterface
 import com.mylosoftworks.kpython.internal.engine.StartSymbol
 import com.mylosoftworks.kpython.internal.engine.initialize
@@ -15,63 +15,83 @@ import com.mylosoftworks.kpython.proxy.PythonProxyObject
  */
 class PyEnvironment internal constructor(internal val engine: PythonEngineInterface) {
 
+    // Constants TODO: Find a better way to get these
+    lateinit var None: PythonProxyObject
+    lateinit var True: PythonProxyObject
+    lateinit var False: PythonProxyObject
+    lateinit var EmptyList: PythonProxyObject
+    lateinit var EmptyDict: PythonProxyObject
+    lateinit var EmptyTuple: PythonProxyObject
+    lateinit var Ellipsis: PythonProxyObject
+
+    // Types TODO: Find a better way to get these
+    lateinit var Str: PythonProxyObject
+    lateinit var Int: PythonProxyObject
+    lateinit var Float: PythonProxyObject
+    lateinit var List: PythonProxyObject
+    lateinit var Dict: PythonProxyObject
+    lateinit var Tuple: PythonProxyObject
+
+    lateinit var globals: PyDict
+    lateinit var locals: PyDict
+
     init {
         engine.Py_Initialize()
+
+        globals = engine.PyDict_New().asProxyObject().asInterface<PyDict>()!!
+        locals = engine.PyDict_New().asProxyObject().asInterface<PyDict>()!!
+
+        None = eval("None")!!
+        True = eval("True")!!
+        False = eval("False")!!
+        EmptyList = eval("[]")!!
+        EmptyDict = eval("{}")!!
+        EmptyTuple = eval("()")!!
+        Ellipsis = eval("...")!!
+
+        Str = eval("str")!!
+        Int = eval("int")!!
+        Float = eval("float")!!
+        List = eval("list")!!
+        Dict = eval("dict")!!
+        Tuple = eval("tuple")!!
     }
 
     constructor(version: PythonVersion, pythonPath: String? = null) : this(PythonEngineInterface.initialize(version, pythonPath))
     constructor(version: String, pythonPath: String? = null) : this(PythonEngineInterface.initialize(version, pythonPath))
 
-    // Constants TODO: Find a better way to get these
-    val None by lazy { eval("None")!! }
-    val True by lazy { eval("True")!! }
-    val False by lazy { eval("False")!! }
-    val EmptyList by lazy { eval("[]")!! }
-    val EmptyDict by lazy { eval("{}")!! }
-    val Ellipsis by lazy { eval("...")!! }
-
-    // Types TODO: Find a better way to get these
-    val Str by lazy { eval("str")!! }
-    val Int by lazy { eval("int")!! }
-    val Float by lazy { eval("float")!! }
-    val List by lazy { eval("list")!! }
-    val Dict by lazy { eval("dict")!! }
-
     fun finalize() {
         engine.Py_Finalize()
     }
 
-    val globals by lazy { engine.PyDict_New().asProxyObject().asInterface<PyDict<String>>() }
-    val locals by lazy { engine.PyDict_New().asProxyObject().asInterface<PyDict<String>>() }
+    /**
+     * For isolated expressions, with return value
+     */
+    inline fun <reified T: KPythonProxy> eval(script: String, globals: PyDict = this.globals, locals: PyDict = this.locals) = eval(script, globals, locals)?.asInterface<T>()
 
     /**
      * For isolated expressions, with return value
      */
-    inline fun <reified T: KPythonProxy> eval(script: String, globals: PyDict<String> = this.globals, locals: PyDict<String> = this.locals) = eval(script, globals, locals)?.asInterface<T>()
-
-    /**
-     * For isolated expressions, with return value
-     */
-    fun eval(script: String, globals: PyDict<String> = this.globals, locals: PyDict<String> = this.locals): PythonProxyObject? {
+    fun eval(script: String, globals: PyDict = this.globals, locals: PyDict = this.locals): PythonProxyObject? {
         return engine.PyRun_String(script, StartSymbol.Eval.value, locals.getKPythonProxyBase().obj, globals.getKPythonProxyBase().obj)?.asProxyObject()
     }
 
     /**
      * For running code as if it were being ran from a file
      */
-    fun file(script: String, globals: PyDict<String> = this.globals, locals: PyDict<String> = this.locals) {
+    fun file(script: String, globals: PyDict = this.globals, locals: PyDict = this.locals) {
         engine.PyRun_String(script, StartSymbol.File.value, locals.getKPythonProxyBase().obj, globals.getKPythonProxyBase().obj)
     }
 
     /**
      * For isolated expressions, with return value
      */
-    inline fun <reified T: KPythonProxy> single(script: String, globals: PyDict<String> = this.globals, locals: PyDict<String> = this.locals) = single(script, globals, locals)?.asInterface<T>()
+    inline fun <reified T: KPythonProxy> single(script: String, globals: PyDict = this.globals, locals: PyDict = this.locals) = single(script, globals, locals)?.asInterface<T>()
 
     /**
      * For running code line by line as if it were ran in an interactive terminal
      */
-    fun single(script: String, globals: PyDict<String> = this.globals, locals: PyDict<String> = this.locals): PythonProxyObject? {
+    fun single(script: String, globals: PyDict = this.globals, locals: PyDict = this.locals): PythonProxyObject? {
         return engine.PyRun_String(script, StartSymbol.Single.value, locals.getKPythonProxyBase().obj, globals.getKPythonProxyBase().obj)?.asProxyObject()
     }
 
@@ -80,16 +100,17 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 //    }
 
     fun convertFrom(input: PythonProxyObject, type: Class<*>): Any? {
+        val typeIsBool = type in arrayOf(Boolean::class.java, java.lang.Boolean::class.java)
         return when {
             type == PythonProxyObject::class.java -> input
             KPythonProxy::class.java.isAssignableFrom(type) -> input.asInterface(type as Class<KPythonProxy>)
             engine.Py_IsNone(input.obj) -> null
-            type == Boolean::class.java && engine.Py_IsTrue(input.obj) -> true
-            type == Boolean::class.java && engine.Py_IsFalse(input.obj) -> false
-            type in arrayOf(Long::class.java, Int::class.java, Short::class.java, Byte::class.java, UByte::class.java, UShort::class.java, UInt::class.java, ULong::class.java) && engine.PyObject_IsInstance(input.obj, Int.obj) -> engine.PyLong_AsLongLong(input.obj)
-            type in arrayOf(Float::class.java, Double::class.java) && engine.PyObject_IsInstance(input.obj, Float.obj) -> engine.PyFloat_AsDouble(input.obj)
-            type == String::class.java && engine.PyObject_IsInstance(input.obj, Str.obj) -> engine.PyUnicode_AsUTF8(input.obj)
-            type == Array::class.java && engine.PyObject_IsInstance(input.obj, List.obj) -> readArray(input.obj, type.componentType)
+            typeIsBool && engine.Py_IsTrue(input.obj) -> true
+            typeIsBool && engine.Py_IsFalse(input.obj) -> false
+            type in arrayOf(Long::class.java, java.lang.Long::class.java, Int::class.java, java.lang.Integer::class.java, Short::class.java, java.lang.Short::class.java, Byte::class.java, java.lang.Byte::class.java, UByte::class.java, UShort::class.java, UInt::class.java, ULong::class.java) && engine.PyObject_IsInstance(input.obj, Int.obj) -> engine.PyLong_AsLongLong(input.obj)
+            type in arrayOf(Float::class.java, java.lang.Float::class.java, Double::class.java, java.lang.Double::class.java) && engine.PyObject_IsInstance(input.obj, Float.obj) -> engine.PyFloat_AsDouble(input.obj)
+            type in arrayOf(java.lang.String::class.java, String::class.java) && engine.PyObject_IsInstance(input.obj, Str.obj) -> engine.PyUnicode_AsUTF8(input.obj)
+            (type == Array::class.java || type.isArray) && engine.PyObject_IsInstance(input.obj, List.obj) -> readArray(input.obj, type.componentType)
             type == HashMap::class.java && engine.PyObject_IsInstance(input.obj, Dict.obj) -> readDict(input.obj)
             else -> input
         }
@@ -99,11 +120,11 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         return convertTo(input)?.asInterface()
     }
 
-    fun convertArgs(vararg args: Any?): PythonProxyObject? {
+    fun convertArgs(vararg args: Any?, prefix: String = "(", postfix: String = ")"): PythonProxyObject? {
         if (args.isEmpty()) return null
 
         val values = args.map { getConvertCharValuePair(it) }
-        val inputString = values.joinToString("", prefix = "(", postfix = ")") { it.first }
+        val inputString = values.joinToString("", prefix = prefix, postfix = postfix) { it.first }
         val inputValues = values.map { it.second }
         val result = engine.Py_BuildValue(inputString, *inputValues.toTypedArray())
         return result?.asProxyObject()
@@ -150,12 +171,12 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         return createProxyObject(list ?: EmptyList.obj).asInterface<PyList>()
     }
 
-    private fun createDict(items: HashMap<*, *>): PyDict<String> {
+    private fun createDict(items: HashMap<*, *>): PyDict {
         val dict = engine.PyDict_New()
         items.forEach {
             engine.PyDict_SetItem(dict, convertTo(it.key)?.obj ?: None.obj, convertTo(it.value)?.obj ?: None.obj)
         }
-        return createProxyObject(dict).asInterface<PyDict<String>>()
+        return createProxyObject(dict).asInterface<PyDict>()
     }
 
     private fun readArray(pyObject: PyObject, itemType: Class<*> = PythonProxyObject::class.java): Array<Any?> {
@@ -180,4 +201,58 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
     private fun manualConvert(input: Any, type: String): PythonProxyObject? {
         return engine.Py_BuildValue(type, input)?.let { createProxyObject(it) }
     }
+
+    // Creation functions
+    fun createTuple(vararg args: Any): PyTuple? {
+        return convertArgs(args)?.asInterface<PyTuple>()
+    }
+
+    fun createList(vararg args: Any): PyList? {
+        return convertArgs(args, "[", "]")?.asInterface<PyList>()
+    }
+
+    data class FunctionCallParams(val self: PythonProxyObject?, val args: PyTuple, val env: PyEnvironment)
+    class PyKotlinFunction(val env: PyEnvironment, val function: FunctionCallParams.() -> Any?) : PythonEngineInterface.PyCFunction {
+        override fun invoke(self: PyObject?, args: PyObject?): PyObject? {
+            return env.convertTo(function(FunctionCallParams(self?.let { env.createProxyObject(it) }, args?.let { env.createProxyObject(it).asInterface<PyTuple>() } ?: env.EmptyTuple.asInterface<PyTuple>(), env)))?.obj
+        }
+    }
+
+    fun createFunction(self: PythonProxyObject? = null, name: String = "", doc: String = "", function: FunctionCallParams.() -> Any?): PyCallable? {
+        val callback = PyKotlinFunction(this, function)
+        val functionStruct = PythonEngineInterface.PyMethodDef.ByReference(name, callback, METH_VARARGS, doc)
+        return engine.PyCFunction_New(functionStruct, self?.obj ?: Str.asInterface<PyClass>().invoke()!!.obj)?.asProxyObject()?.asInterface<PyCallable>()
+    }
+
+    fun createFunctionUnit(self: PythonProxyObject? = null, name: String = "", doc: String = "", function: FunctionCallParams.() -> Unit): PyCallable? {
+        return createFunction(self, name, doc) { function(this); None }
+    }
+
+    // Functions during python code (Like in a callback)
+
+    enum class DefType(internal val func: (PythonEngineInterface) -> PyObject) {
+        BUILTINS({ it.PyEval_GetBuiltins() }),
+        GLOBALS({ it.PyEval_GetGlobals() }),
+        LOCALS({ it.PyEval_GetLocals() }),
+    }
+
+    fun getDefDict(type: DefType): PyDict {
+        return type.func(engine).asProxyObject().asInterface<PyDict>()
+    }
+}
+
+fun String.toPython(env: PyEnvironment): PythonProxyObject {
+    return env.convertTo(this)!!
+}
+
+fun Number.toPython(env: PyEnvironment): PythonProxyObject {
+    return env.convertTo(this)!!
+}
+
+fun Array<*>.toPython(env: PyEnvironment): PythonProxyObject {
+    return env.convertTo(this)!!
+}
+
+fun HashMap<*, *>.toPython(env: PyEnvironment): PythonProxyObject {
+    return env.convertTo(this)!!
 }

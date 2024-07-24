@@ -2,13 +2,20 @@ package com.mylosoftworks.kpython.internal.engine
 
 import com.mylosoftworks.kpython.PythonVersion
 import com.mylosoftworks.kpython.internal.engine.pythondefs.PyObject
-import com.mylosoftworks.kpython.internal.engine.pythondefs.PyTypeObject
 import com.mylosoftworks.kpython.internal.engine.pythondefs.Py_ssize_t
-import com.sun.jna.Library
-import com.sun.jna.Native
-import com.sun.jna.NativeLibrary
+import com.sun.jna.*
 
 internal interface PythonEngineInterface : Library {
+    // https://docs.python.org/3/c-api/structures.html#c.PyMethodDef
+    @Structure.FieldOrder("ml_name", "ml_meth", "ml_flags", "ml_doc")
+    open class PyMethodDef(@JvmField var ml_name: String?, @JvmField var ml_meth: PyCFunction?, @JvmField var ml_flags: Int, @JvmField var ml_doc: String?) : Structure() {
+        class ByReference(ml_name: String?, ml_meth: PyCFunction?, ml_flags: Int, ml_doc: String?) : PyMethodDef(ml_name, ml_meth, ml_flags, ml_doc), Structure.ByReference
+    }
+
+    interface PyCFunction : Callback {
+        fun invoke(self: PyObject?, args: PyObject?): PyObject?
+    }
+
     // init and finalize
     fun Py_IsInitialized(): Boolean
     fun Py_Initialize()
@@ -50,8 +57,6 @@ internal interface PythonEngineInterface : Library {
     fun PyEval_GetGlobals(): PyObject
 
     // dicts
-    fun PyDict_Check(p: PyObject): Boolean
-    fun PyDict_CheckExact(p: PyObject): Boolean
     fun PyDict_New(): PyObject
     fun PyDict_Clear(p: PyObject)
     fun PyDict_Contains(p: PyObject, key: PyObject): Boolean
@@ -70,9 +75,6 @@ internal interface PythonEngineInterface : Library {
     fun PyDict_Size(p: PyObject): Py_ssize_t
 
     // lists
-
-    fun PyList_Check(p: PyObject): Boolean
-    fun PyList_CheckExact(p: PyObject): Boolean
     fun PyList_new(len: Py_ssize_t = 0L): PyObject?
     fun PyList_Size(list: PyObject): Py_ssize_t
     fun PyList_GET_SIZE(list: PyObject): Py_ssize_t
@@ -83,6 +85,10 @@ internal interface PythonEngineInterface : Library {
     fun PyList_Insert(list: PyObject, index: Py_ssize_t, item: PyObject): Boolean
     fun PyList_Append(list: PyObject, item: PyObject): Boolean
 
+    // tuples
+    fun PyTuple_Size(tuple: PyObject): Py_ssize_t
+    fun PyTuple_GetItem(tuple: PyObject, pos: Py_ssize_t): PyObject?
+
     // python functions
     fun PyFunction_Check(p: PyObject): Boolean
     fun PyFunction_New(code: PyObject, globals: PyObject): PyObject?
@@ -90,7 +96,7 @@ internal interface PythonEngineInterface : Library {
     fun PyFunction_GetCode(op: PyObject): PyObject
 
     // c functions
-
+    fun PyCFunction_New(ml: PyMethodDef.ByReference, self: PyObject): PyObject?
 
     // objects
     fun PyObject_HasAttr(o: PyObject, attr_name: PyObject): Boolean

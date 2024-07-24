@@ -2,20 +2,29 @@ package com.mylosoftworks.kpython.environment.pythonobjects
 
 import com.mylosoftworks.kpython.proxy.DontUsePython
 import com.mylosoftworks.kpython.proxy.KPythonProxy
-import com.mylosoftworks.kpython.proxy.PyFun
 import com.mylosoftworks.kpython.proxy.PythonProxyObject
 
-interface PyDict<K> : KPythonProxy {
+interface PyDict : KPythonProxy {
     fun clear()
-    fun copy(): PyDict<K>
+    fun copy(): PyDict
+    fun items(): PythonProxyObject
 
     @DontUsePython
-    operator fun get(key: K): PythonProxyObject?
+    fun getSize(): Long
 
     @DontUsePython
-    operator fun set(self: PythonProxyObject, key: K, value: Any)
+    operator fun get(key: Any): PythonProxyObject?
+
+    @DontUsePython
+    operator fun set(key: Any, value: Any)
 
     companion object {
+        fun getSize(self: PythonProxyObject): Long {
+            return self.let {
+                it.env.engine.PyDict_Size(it.obj)
+            }
+        }
+
         fun get(self: PythonProxyObject, key: Any): PythonProxyObject? {
             return self.let {
                 it.env.engine.PyDict_GetItem(it.obj, it.env.convertTo(key)!!.obj)?.let { it1 ->

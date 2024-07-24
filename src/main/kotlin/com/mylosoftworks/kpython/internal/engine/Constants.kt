@@ -17,6 +17,9 @@ internal enum class StartSymbol(val value: Int) {
     Eval(Py_eval_input);
 }
 
+internal const val METH_VARARGS = 0x0001
+internal const val METH_KEYWORDS = 0x0002
+
 //internal const val Py_CONSTANT_NONE             = 0
 //internal const val Py_CONSTANT_FALSE            = 1
 //internal const val Py_CONSTANT_TRUE             = 2
