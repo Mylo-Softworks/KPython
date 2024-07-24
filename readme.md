@@ -28,3 +28,15 @@ Some types can be converted automatically between Kotlin and Python, these types
 * (To python only) HashMap -> dict
 * PythonProxyObject -> object (No conversion occurs, as PythonProxyObject holds the real representation of the proxy)
 * KPythonProxy -> object (Converted to PythonProxyObject, then use the value)
+
+### Kotlin functions
+Kotlin functions are used to execute kotlin code from python, no automatic conversion exists, but there are many ways to create them.  
+[see more](readme/KotlinFunctions)
+
+### Compatibility with file scripts
+A few methods exist to support relative imports from python. Getting and setting argv is also supported.  
+`PyEnvironment.setFakeFileDir()` is used to set the directory where imports come from. Optionally, a `__file__` can also be set for the PyEnvironment.  
+`PyEnvironment.setArgv()` is used to set argv, as if the script was ran from a file with arguments. `setArgv` takes a string for the filename, and then `varargs String` for the arguments.
+
+### Environment
+Creating an environment is done like `val env = PyEnvironment(PythonVersion.python312)`. More documentation pending.

@@ -21,10 +21,10 @@ interface PyDict : KPythonProxy {
     operator fun set(key: Any, value: Any)
 
     @DontUsePython
-    fun createMethod(name: Any, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Any?)
+    fun createFunction(name: Any, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Any?)
 
     @DontUsePython
-    fun createMethodUnit(name: Any, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Unit)
+    fun createFunctionUnit(name: Any, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Unit)
 
     @DontUsePython
     fun invokeMethod(key: Any, vararg args: Any): PythonProxyObject?
@@ -52,12 +52,12 @@ interface PyDict : KPythonProxy {
             }
         }
 
-        fun createMethod(self: PythonProxyObject, name: Any, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Any?) {
+        fun createFunction(self: PythonProxyObject, name: Any, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Any?) {
             val method = self.env.createFunction(self, name.toString(), docs, code)!!
             set(self, name, method.getKPythonProxyBase())
         }
 
-        fun createMethodUnit(self: PythonProxyObject, name: Any, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Unit) {
+        fun createFunctionUnit(self: PythonProxyObject, name: Any, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Unit) {
             val method = self.env.createFunctionUnit(self, name.toString(), docs, code)!!
             set(self, name, method.getKPythonProxyBase())
         }

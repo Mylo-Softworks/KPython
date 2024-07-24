@@ -3,7 +3,6 @@ import com.mylosoftworks.kpython.environment.PyEnvironment
 import com.mylosoftworks.kpython.environment.pythonobjects.PyCallable
 import com.mylosoftworks.kpython.environment.pythonobjects.PyClass
 import com.mylosoftworks.kpython.environment.pythonobjects.createTyped
-import com.mylosoftworks.kpython.proxy.KPythonProxy
 import org.junit.jupiter.api.Test
 
 // Tests which use KPython at a user-level
@@ -68,7 +67,7 @@ class KPythonTests {
 
         val compString = "Abracadabra"
 
-        env.globals.createMethod("get_kotlin_string") {
+        env.globals.createFunction("get_kotlin_string") {
             compString
         }
 
