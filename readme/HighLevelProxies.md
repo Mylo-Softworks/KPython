@@ -8,7 +8,11 @@ To get the associated `PythonProxyObject`, call `getKPythonProxyBase()`.
 ## Predefined High-level proxies
 Some high-level proxies are predefined, you can inherit or directly use these.
 * PyCallable -> An object which can be called (A function, method, class, or instance of a class with `__call__` defined)
-* PyClass: PyCallable -> Specifically a
+* PyClass: PyCallable -> Specifically a callable representing a class
+* PyEnterable -> An object which has `__enter__` and `__exit__`, can be called from kotlin using `.with(*args) {}`, you have access to `self` and `given`, `given` is the return type from the `__enter__`.
+* PyDict -> A python dictionary
+* PyList -> A python list
+* PyTuple -> A python tuple
 
 ## Accessing python attributes
 Python attributes can be declared by simply creating fields. If an attribute is always a string, simply declare it as a string.  

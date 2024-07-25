@@ -2,7 +2,9 @@ import com.mylosoftworks.kpython.PythonVersion
 import com.mylosoftworks.kpython.environment.PyEnvironment
 import com.mylosoftworks.kpython.environment.pythonobjects.PyCallable
 import com.mylosoftworks.kpython.environment.pythonobjects.PyClass
+import com.mylosoftworks.kpython.environment.pythonobjects.PyEnterable
 import com.mylosoftworks.kpython.environment.pythonobjects.createTyped
+import com.mylosoftworks.kpython.proxy.KPythonProxy
 import org.junit.jupiter.api.Test
 
 // Tests which use KPython at a user-level
@@ -67,11 +69,32 @@ class KPythonTests {
 
         val compString = "Abracadabra"
 
-        env.globals.createFunction("get_kotlin_string") {
+        env.globals.createMethod("get_kotlin_string") {
             compString
         }
 
         val returnValue = env.globals.invokeMethod("get_kotlin_string")!!.toJvmRepresentation<String>()
         assert(compString == returnValue)
+    }
+
+    @Test
+    fun testEnterExit() {
+        val env = PyEnvironment(PythonVersion.python312)
+
+        env.file("""
+            class A:
+                def __enter__(self):
+                    return "Example!"
+
+                def __exit__(self, exc_type, exc_val, exc_tb):
+                    pass
+        """.trimIndent())
+
+        val A = env.globals["A"]!!.asInterface<PyClass>()
+        val inst = A()!!.asInterface<PyEnterable>()
+
+        inst.with {
+            assert(given.toString() == "Example!")
+        }
     }
 }

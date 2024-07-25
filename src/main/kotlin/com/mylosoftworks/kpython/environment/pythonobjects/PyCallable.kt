@@ -13,11 +13,7 @@ interface PyCallable : KPythonProxy {
 
     companion object {
         fun invoke(self: PythonProxyObject, vararg args: Any?): PythonProxyObject? {
-            self.let {
-                val argsVal = if (args.isEmpty()) null else it.env.convertArgs(*args)?.obj
-                return it.env.engine.PyObject_CallObject(it.obj, argsVal)
-                    ?.let { it1 -> it.env.createProxyObject(it1) }
-            }
+            return self.invoke(*args)
         }
     }
 }

@@ -10,7 +10,7 @@ interface PyTuple : KPythonProxy {
     fun size(): Long
 
     @DontUsePython
-    operator fun get(idx: Int): PythonProxyObject?
+    operator fun get(idx: Long): PythonProxyObject?
 
     @DontUsePython
     operator fun component1(): PythonProxyObject?
@@ -44,17 +44,19 @@ interface PyTuple : KPythonProxy {
 
     companion object {
         fun size(self: PythonProxyObject): Long {
-            return self.let {
-                it.env.engine.PyTuple_Size(it.obj)
-            }
+            return self.env.quickAccess.tupleGetSize(self)
+//            return self.let {
+//                it.env.engine.PyTuple_Size(it.obj)
+//            }
         }
 
-        fun get(self: PythonProxyObject, idx: Int): PythonProxyObject? {
-            return self.let {
-                it.env.engine.PyTuple_GetItem(it.obj, idx.toLong())?.let { it2 ->
-                    it.env.createProxyObject(it2)
-                }
-            }
+        fun get(self: PythonProxyObject, idx: Long): PythonProxyObject? {
+            return self.env.quickAccess.tupleGetItem(self, idx)
+//            return self.let {
+//                it.env.engine.PyTuple_GetItem(it.obj, idx)?.let { it2 ->
+//                    it.env.createProxyObject(it2)
+//                }
+//            }
         }
 
         fun component1(self: PythonProxyObject): PythonProxyObject? {

@@ -124,17 +124,17 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
     }
 
     inline fun <reified T: KPythonProxy> convertTo(input: Any?): T? {
-        return convertTo(input)?.asInterface()
+        return convertTo(input)?.asInterface<T>()
     }
 
     fun convertArgs(vararg args: Any?, prefix: String = "(", postfix: String = ")"): PythonProxyObject? {
-        if (args.isEmpty()) return null
+//        if (args.isEmpty()) return null
 
         val values = args.map { getConvertCharValuePair(it) }
         val inputString = values.joinToString("", prefix = prefix, postfix = postfix) { it.first }
         val inputValues = values.map { it.second }
         val result = engine.Py_BuildValue(inputString, *inputValues.toTypedArray())
-        return result?.asProxyObject()
+        return result?.let { createProxyObject(it, GCBehavior.ONLY_DEC) }
     }
 
     fun convertTo(input: Any?): PythonProxyObject? {
@@ -166,6 +166,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
             is Long -> "L" to input
             is Int -> "i" to input
             is Boolean -> "b" to if (input) True else False
+            is Array<*> -> "O" to (createList(*(input as Array<Any>))?.getKPythonProxyBase()?.obj ?: None.obj)
 
             else -> "O" to None
         }
@@ -206,7 +207,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         return createProxyObject(rawValue, GCBehavior.FULL)
     }
 
-    internal fun createProxyObject(rawValue: PyObject, gcBehavior: GCBehavior = GCBehavior.FULL): PythonProxyObject {
+    fun createProxyObject(rawValue: PyObject, gcBehavior: GCBehavior = GCBehavior.FULL): PythonProxyObject {
         return PythonProxyObject(this, rawValue, gcBehavior)
     }
 
@@ -250,12 +251,13 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
     }
 
     fun getDefDict(type: DefType): PyDict {
-        return createProxyObject(type.func(engine), GCBehavior.IGNORE).asInterface<PyDict>() // Borrowed
+        return createProxyObject(type.func(engine), GCBehavior.FULL).asInterface<PyDict>() // Borrowed, but given to kotlin
     }
 
     // Common functions
+
     fun import(name: String): PythonProxyObject? {
-        return engine.PyImport_ImportModule(name)?.asProxyObject()
+        return engine.PyImport_ImportModule(name)?.let { createProxyObject(it, GCBehavior.ONLY_DEC) }
     }
 
     inline fun <reified T: KPythonProxy> import(name: String): T? {
@@ -280,9 +282,9 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 
     fun getArgv(): List<String>? {
         val argv = engine.PySys_GetObject("argv") ?: return null
-        val proxy = createProxyObject(argv, GCBehavior.IGNORE).asInterface<PyList>() // Borrowed
+        val proxy = createProxyObject(argv, GCBehavior.FULL).asInterface<PyList>() // Borrowed, but given to kotlin
         return List(proxy.size().toInt()) {
-            proxy[it].toString()
+            proxy[it.toLong()].toString()
         }
     }
 
@@ -297,7 +299,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
      * Get a sys variable, borrowed, so python refcount is not affected
      */
     fun getSys(name: String): PythonProxyObject? {
-        return engine.PySys_GetObject(name)?.let { createProxyObject(it, GCBehavior.IGNORE) } // Borrowed
+        return engine.PySys_GetObject(name)?.let { createProxyObject(it, GCBehavior.FULL) } // Borrowed, but given to kotlin
     }
 
     /**
@@ -306,6 +308,63 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
     fun setSys(name: String, value: Any) {
         val converted = convertTo(value) ?: return
         engine.PySys_SetObject(name, converted.obj)
+    }
+
+    val quickAccess: QuickAccess = QuickAccess()
+    // Mid-level bindings for fast access to functions, dictionaries, lists, and tuples
+    inner class QuickAccess {
+        // Functions
+        fun invoke(o: PythonProxyObject, vararg args: Any?): PythonProxyObject? {
+            val args2 = convertArgs(*args)
+            return engine.PyObject_CallObject(o.obj, args2?.obj)?.let { createProxyObject(it) }
+        }
+
+        // Dicts
+        fun dictGetSize(o: PythonProxyObject): Long {
+            return engine.PyDict_Size(o.obj)
+        }
+
+        fun dictGetItem(o: PythonProxyObject, key: Any?): PythonProxyObject? {
+            return engine.PyDict_GetItem(o.obj, convertTo(key)!!.obj)?.let {
+                createProxyObject(
+                    it, GCBehavior.FULL // Borrowed, but given to kotlin
+                )
+            }
+        }
+
+        fun dictSetItem(o: PythonProxyObject, key: Any?, value: Any?) {
+            engine.PyDict_SetItem(o.obj, convertTo(key)!!.obj, convertTo(value)!!.obj)
+        }
+
+        fun dictContainsKey(o: PythonProxyObject, key: Any?): Boolean {
+            return engine.PyDict_Contains(o.obj, convertTo(key)!!.obj) == 1
+        }
+
+        // lists
+        fun listGetSize(o: PythonProxyObject): Long {
+            return engine.PyList_Size(o.obj)
+        }
+
+        fun listGetItem(o: PythonProxyObject, idx: Long): PythonProxyObject? {
+            return engine.PyList_GetItem(o.obj, idx)?.let { it2 ->
+                createProxyObject(it2, GCBehavior.FULL) // Borrowed, but given to kotlin
+            }
+        }
+
+        fun listSetItem(o: PythonProxyObject, idx: Long, value: Any?) {
+            engine.PyList_SetItem(o.obj, idx, convertTo(value)!!.obj)
+        }
+
+        // tuples
+        fun tupleGetSize(o: PythonProxyObject): Long {
+            return engine.PyTuple_Size(o.obj)
+        }
+
+        fun tupleGetItem(o: PythonProxyObject, idx: Long): PythonProxyObject? {
+            return engine.PyTuple_GetItem(o.obj, idx)?.let {
+                createProxyObject(it, GCBehavior.FULL) // Borrowed, but given to kotlin
+            }
+        }
     }
 }
 

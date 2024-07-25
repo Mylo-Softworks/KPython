@@ -5,6 +5,7 @@ import com.mylosoftworks.kpython.proxy.GCBehavior
 import com.mylosoftworks.kpython.proxy.KPythonProxy
 import com.mylosoftworks.kpython.proxy.PythonProxyObject
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 interface PyList : KPythonProxy {
     fun append(item: Any?)
@@ -23,31 +24,34 @@ interface PyList : KPythonProxy {
     fun size(): Long
 
     @DontUsePython
-    operator fun get(key: Int): PythonProxyObject?
+    operator fun get(key: Long): PythonProxyObject?
 
     @DontUsePython
-    operator fun set(key: Int, value: PythonProxyObject)
+    operator fun set(key: Long, value: Any?)
 
     @DontUsePython
     operator fun iterator(): Iterator<PythonProxyObject>
 
     companion object {
         fun size(self: PythonProxyObject): Long {
-            return self.let {
-                it.env.engine.PyList_Size(it.obj)
-            }
+            return self.env.quickAccess.listGetSize(self)
+//            return self.let {
+//                it.env.engine.PyList_Size(it.obj)
+//            }
         }
 
-        fun get(self: PythonProxyObject, key: Int): PythonProxyObject? {
-            return self.let {
-                it.env.engine.PyList_GetItem(self.obj, key.toLong())?.let { it2 ->
-                    it.env.createProxyObject(it2, GCBehavior.IGNORE) // Borrowed
-                }
-            }
+        fun get(self: PythonProxyObject, key: Long): PythonProxyObject? {
+            return self.env.quickAccess.listGetItem(self, key)
+//            return self.let {
+//                it.env.engine.PyList_GetItem(self.obj, key.toLong())?.let { it2 ->
+//                    it.env.createProxyObject(it2, GCBehavior.IGNORE) // Borrowed
+//                }
+//            }
         }
 
-        fun set(self: PythonProxyObject, key: Int, value: PythonProxyObject) {
-            self.env.engine.PyList_SetItem(self.obj, key.toLong(), value.obj)
+        fun set(self: PythonProxyObject, key: Long, value: Any?) {
+            self.env.quickAccess.listSetItem(self, key, value)
+//            self.env.engine.PyList_SetItem(self.obj, key.toLong(), value.obj)
         }
 
         fun iterator(self: PythonProxyObject): Iterator<PythonProxyObject?> {
@@ -57,7 +61,7 @@ interface PyList : KPythonProxy {
 }
 
 class PythonListIterator(val list: PyList) : Iterator<PythonProxyObject?> {
-    val idx = AtomicInteger(0)
+    val idx = AtomicLong(0)
     val size = list.size()
 
     override fun hasNext(): Boolean {

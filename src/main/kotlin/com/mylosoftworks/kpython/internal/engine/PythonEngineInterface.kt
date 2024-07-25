@@ -60,7 +60,7 @@ internal interface PythonEngineInterface : Library {
     // dicts
     fun PyDict_New(): PyObject
     fun PyDict_Clear(p: PyObject)
-    fun PyDict_Contains(p: PyObject, key: PyObject): Boolean
+    fun PyDict_Contains(p: PyObject, key: PyObject): Int
     fun PyDict_Copy(p: PyObject): PyObject
     fun PyDict_SetItem(p: PyObject, key: PyObject, value: PyObject): Boolean
     fun PyDict_SetItemString(p: PyObject, key: String, value: PyObject): Boolean
@@ -126,6 +126,7 @@ internal interface PythonEngineInterface : Library {
 
     // Modules
     fun PyImport_ImportModule(name: String): PyObject?
+    fun PyModule_New(name: String): PyObject? // New ref, see https://docs.python.org/3/c-api/module.html#c.PyModule_NewObject for information
 
     // Refcounting
     fun Py_IncRef(o: PyObject)

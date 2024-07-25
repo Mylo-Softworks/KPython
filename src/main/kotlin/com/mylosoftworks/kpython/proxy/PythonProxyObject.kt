@@ -3,29 +3,44 @@ package com.mylosoftworks.kpython.proxy
 import com.mylosoftworks.kpython.environment.PyEnvironment
 import com.mylosoftworks.kpython.internal.engine.pythondefs.PyObject
 import java.lang.reflect.Proxy
+import kotlin.reflect.KClass
 
-internal enum class GCBehavior {
-    FULL, // Copied in Kotlin, created objects shouldn't have FULL as the refcount is 1 when an object is created
-    ONLY_DEC, // Created in CPython
-    IGNORE // Borrowed, or constant value
+enum class GCBehavior {
+    FULL, // Copied in Kotlin, created objects shouldn't have FULL as the refcount is 1 when an object is created, can be used for "borrowed reference"
+    ONLY_DEC, // Created in CPython, used for "new reference"
+    IGNORE // Borrowed (And not kept in kotlin), or constant value, can be used for "borrowed reference"
 }
 
 /**
  * Represents an unknown python object in kotlin
  */
-open class PythonProxyObject internal constructor(val env: PyEnvironment, val obj: PyObject, internal val gcBehavior: GCBehavior) {
+open class PythonProxyObject internal constructor(val env: PyEnvironment, val obj: PyObject, val gcBehavior: GCBehavior) {
     init {
-        if (gcBehavior == GCBehavior.FULL) env.engine.Py_IncRef(obj)
+        if (gcBehavior == GCBehavior.FULL) incRef()
     }
 
     fun finalize() {
         if (gcBehavior == GCBehavior.IGNORE) return
 
-        env.engine.Py_DecRef(obj)
+        decRef()
+    }
+
+    private fun incRef() = env.engine.Py_IncRef(obj)
+    private fun decRef() = env.engine.Py_DecRef(obj)
+
+    /**
+     * Get a new reference to the same object.
+     */
+    fun getReference(): PythonProxyObject {
+        return env.createProxyObject(obj, GCBehavior.FULL)
     }
 
     inline fun <reified T: KPythonProxy> asInterface(): T {
         return asInterface(T::class.java) as T
+    }
+
+    inline infix fun <reified T: KPythonProxy, U: KClass<T>> convTo(target: U): T {
+        return asInterface(target.java) as T
     }
 
     fun <T: KPythonProxy> asInterface(clazz: Class<T>): Any {
@@ -40,9 +55,22 @@ open class PythonProxyObject internal constructor(val env: PyEnvironment, val ob
         env.engine.PyObject_SetAttrString(obj, key, value.obj)
     }
 
-    fun invokeMethod(key: String, vararg params: Any): PythonProxyObject? {
-        val method = this[key]!!.obj
-        return env.engine.PyObject_CallObject(method, env.convertArgs(*params)?.obj)?.let { env.createProxyObject(it) }
+    fun hasAttribute(key: String): Boolean {
+        return env.engine.PyObject_HasAttrString(obj, key)
+    }
+
+//    fun invokeMethod(key: String, vararg params: Any): PythonProxyObject? {
+//        val method = this[key]!!.obj
+//        return env.engine.PyObject_CallObject(method, env.convertArgs(*params)?.obj)?.let { env.createProxyObject(it) }
+//    }
+
+    fun invokeMethod(key: String, vararg params: Any?): PythonProxyObject? {
+        val method = this[key]!!
+        return env.quickAccess.invoke(method, *params)
+    }
+
+    fun invoke(vararg params: Any?): PythonProxyObject? {
+        return env.quickAccess.invoke(this, *params)
     }
 
     fun createMethod(name: String, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Any?) {
