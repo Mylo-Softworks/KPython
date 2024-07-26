@@ -137,19 +137,19 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         return result?.let { createProxyObject(it, GCBehavior.ONLY_DEC) }
     }
 
-    fun convertTo(input: Any?): PythonProxyObject? {
+    fun convertTo(input: Any?): PythonProxyObject {
         return when (input) {
             null -> None
             is PythonProxyObject -> input
             is KPythonProxy -> input.getKPythonProxyBase()
-            is String -> manualConvert(input, "s")
-            is Float -> manualConvert(input, "f")
-            is Double -> manualConvert(input, "d")
-            is Char -> manualConvert(input, "C")
-            is Long -> manualConvert(input, "L")
-            is Int -> manualConvert(input, "i")
-            is Boolean -> manualConvert(if (input) True else False, "b")
-            is Array<*> -> createList(*(input as Array<Any>))?.getKPythonProxyBase()
+            is String -> manualConvert(input, "s")!!
+            is Float -> manualConvert(input, "f")!!
+            is Double -> manualConvert(input, "d")!!
+            is Char -> manualConvert(input, "C")!!
+            is Long -> manualConvert(input, "L")!!
+            is Int -> manualConvert(input, "i")!!
+            is Boolean -> if (input) True else False
+            is Array<*> -> createList(*(input as Array<Any>))?.getKPythonProxyBase()!!
             else -> None
         }
     }
@@ -172,17 +172,17 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         }
     }
 
-    private fun createArray(items: Array<*>): PyList {
+    private fun createArray(items: Array<*>? = null): PyList {
         val list = engine.PyList_new()
-        items.forEach {
+        items?.forEach {
             engine.PyList_Append(list ?: EmptyList.obj, convertTo(it)?.obj ?: None.obj)
         }
         return createProxyObject(list ?: EmptyList.obj, GCBehavior.ONLY_DEC).asInterface<PyList>()
     }
 
-    private fun createDict(items: HashMap<*, *>): PyDict {
+    private fun createDict(items: HashMap<*, *>? = null): PyDict {
         val dict = engine.PyDict_New()
-        items.forEach {
+        items?.forEach {
             engine.PyDict_SetItem(dict, convertTo(it.key)?.obj ?: None.obj, convertTo(it.value)?.obj ?: None.obj)
         }
         return createProxyObject(dict, GCBehavior.ONLY_DEC).asInterface<PyDict>()
@@ -240,6 +240,25 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 
     fun createFunctionUnit(self: PythonProxyObject? = null, name: String = "", doc: String = "", function: FunctionCallParams.() -> Unit): PyCallable? {
         return createFunction(self, name, doc) { function(this); None }
+    }
+
+    fun createModule(name: String, register: Boolean = true): PyModule {
+        val mod = createProxyObject(engine.PyModule_New(name), GCBehavior.ONLY_DEC)
+        if (register) {
+            getSys<PyDict>("modules")!![name] = mod
+        }
+        return mod.asInterface<PyModule>()
+    }
+
+    fun createClass(name: String): PyClass? {
+        val tempGlobals = createDict()
+        single("""
+            class $name:
+              pass
+        """.trimIndent(), globals = tempGlobals)
+        val clazz = tempGlobals[name]?.asInterface<PyClass>()
+        clazz?.__name__ = name // Set the name of the class
+        return clazz
     }
 
     // Functions during python code (Like in a callback)
@@ -364,6 +383,20 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
             return engine.PyTuple_GetItem(o.obj, idx)?.let {
                 createProxyObject(it, GCBehavior.FULL) // Borrowed, but given to kotlin
             }
+        }
+
+        // module
+        fun moduleGetDict(o: PythonProxyObject): PythonProxyObject? {
+            return engine.PyModule_GetDict(o.obj)?.let {
+                createProxyObject(it, GCBehavior.FULL) // Borrowed, but given to kotlin
+            }
+        }
+
+        fun typeGetDict(o: PythonProxyObject): PythonProxyObject? {
+            return o["__dict__"]
+//            return engine.PyType_GetDict(o.obj)?.let {
+//                createProxyObject(it, GCBehavior.ONLY_DEC) // Borrowed, but given to kotlin
+//            }
         }
     }
 }

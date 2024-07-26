@@ -2,19 +2,35 @@ package com.mylosoftworks.kpython.internal.engine
 
 import com.mylosoftworks.kpython.PythonVersion
 import com.mylosoftworks.kpython.internal.engine.pythondefs.PyObject
+import com.mylosoftworks.kpython.internal.engine.pythondefs.PyTypeObject
 import com.mylosoftworks.kpython.internal.engine.pythondefs.Py_ssize_t
 import com.sun.jna.*
 
 internal interface PythonEngineInterface : Library {
     // https://docs.python.org/3/c-api/structures.html#c.PyMethodDef
     @Structure.FieldOrder("ml_name", "ml_meth", "ml_flags", "ml_doc")
-    open class PyMethodDef(@JvmField var ml_name: String?, @JvmField var ml_meth: PyCFunction?, @JvmField var ml_flags: Int, @JvmField var ml_doc: String?) : Structure() {
+    open class PyMethodDef(@JvmField var ml_name: String?, @JvmField var ml_meth: PyCFunction?, @JvmField var ml_flags: Int, @JvmField var ml_doc: String?): Structure() {
         class ByReference(ml_name: String?, ml_meth: PyCFunction?, ml_flags: Int, ml_doc: String?) : PyMethodDef(ml_name, ml_meth, ml_flags, ml_doc), Structure.ByReference
     }
 
     interface PyCFunction : Callback {
         fun invoke(self: PyObject?, args: PyObject?): PyObject?
     }
+
+    @Structure.FieldOrder("slot", "pfunc")
+    open class PyType_Slot(
+        @JvmField var slot: Int,
+        @JvmField var pfunc: Pointer?
+    ): Structure(), Structure.ByReference
+
+    @Structure.FieldOrder("name", "basicSize", "itemSize", "flags", "slots")
+    open class PyType_Spec(
+        @JvmField var name: String,
+        @JvmField var basicSize: Int,
+        @JvmField var itemSize: Int,
+        @JvmField var flags: Int, // Uint
+        @JvmField var slots: PyType_Slot? // Array of PyType_Slot structures. Terminated by the special slot value {0, NULL}.
+    ): Structure(), Structure.ByReference
 
     // init and finalize
     fun Py_IsInitialized(): Boolean
@@ -126,7 +142,8 @@ internal interface PythonEngineInterface : Library {
 
     // Modules
     fun PyImport_ImportModule(name: String): PyObject?
-    fun PyModule_New(name: String): PyObject? // New ref, see https://docs.python.org/3/c-api/module.html#c.PyModule_NewObject for information
+    fun PyModule_New(name: String): PyObject // New ref, see https://docs.python.org/3/c-api/module.html#c.PyModule_NewObject for information
+    fun PyModule_GetDict(module: PyObject): PyObject?
 
     // Refcounting
     fun Py_IncRef(o: PyObject)
@@ -135,6 +152,10 @@ internal interface PythonEngineInterface : Library {
     // Sys
     fun PySys_GetObject(name: String): PyObject? // Borrowed
     fun PySys_SetObject(name: String, value: PyObject): Int
+
+    // Class/Type
+    fun PyType_FromSpec(spec: PyType_Spec): PyTypeObject?
+    fun PyType_GetDict(type: PyTypeObject): PyObject?
 
     companion object // Uses extension methods just in case
 }

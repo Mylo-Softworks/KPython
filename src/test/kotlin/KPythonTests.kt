@@ -97,4 +97,38 @@ class KPythonTests {
             assert(given.toString() == "Example!")
         }
     }
+
+    @Test
+    fun testModuleCreation() {
+        val env = PyEnvironment(PythonVersion.python312)
+
+        val testModule = env.createModule("testmodule", true)
+
+        testModule.getDict()?.createMethod("testFunc") {
+            return@createMethod "Compare me!"
+        }
+
+        env.file("""
+            import testmodule
+            
+            result = testmodule.testFunc()
+        """.trimIndent())
+
+        assert(env.globals["result"].toString() == "Compare me!")
+    }
+
+    @Test
+    fun testCreateClass() {
+        val env = PyEnvironment(PythonVersion.python312)
+
+        val pyClass = env.createClass("A")
+
+        pyClass?.getKPythonProxyBase()?.createMethod("testFunc") {
+            return@createMethod "The ${self?.get("__class__")?.get("__name__")} object has a function!"
+        }
+
+        val inst = pyClass?.invoke()
+        println(inst?.invokeMethod("testFunc").toString())
+        assert(inst?.invokeMethod("testFunc").toString() == "The ${pyClass?.__name__} object has a function!")
+    }
 }
