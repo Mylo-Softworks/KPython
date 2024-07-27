@@ -9,12 +9,16 @@ import com.sun.jna.*
 internal interface PythonEngineInterface : Library {
     // https://docs.python.org/3/c-api/structures.html#c.PyMethodDef
     @Structure.FieldOrder("ml_name", "ml_meth", "ml_flags", "ml_doc")
-    open class PyMethodDef(@JvmField var ml_name: String?, @JvmField var ml_meth: PyCFunction?, @JvmField var ml_flags: Int, @JvmField var ml_doc: String?): Structure() {
-        class ByReference(ml_name: String?, ml_meth: PyCFunction?, ml_flags: Int, ml_doc: String?) : PyMethodDef(ml_name, ml_meth, ml_flags, ml_doc), Structure.ByReference
+    open class PyMethodDef(@JvmField var ml_name: String?, @JvmField var ml_meth: PyCFunctionWithKwargs?, @JvmField var ml_flags: Int, @JvmField var ml_doc: String?): Structure() {
+        class ByReference(ml_name: String?, ml_meth: PyCFunctionWithKwargs?, ml_flags: Int, ml_doc: String?) : PyMethodDef(ml_name, ml_meth, ml_flags, ml_doc), Structure.ByReference
     }
 
-    interface PyCFunction : Callback {
+    interface PyCFunction : Callback { // https://docs.python.org/3/c-api/structures.html#c.PyCFunction
         fun invoke(self: PyObject?, args: PyObject?): PyObject?
+    }
+
+    interface PyCFunctionWithKwargs : Callback { // https://docs.python.org/3/c-api/structures.html#c.PyCFunctionWithKeywords
+        fun invoke(self: PyObject?, args: PyObject?, kwargs: PyObject?): PyObject?
     }
 
     @Structure.FieldOrder("slot", "pfunc")
@@ -129,7 +133,7 @@ internal interface PythonEngineInterface : Library {
 
     // function calling (https://docs.python.org/3/c-api/call.html)
     fun PyCallable_Check(o: PyObject): Boolean
-    fun PyObject_Call(callable: PyObject, args: PyObject, kwargs: PyObject): PyObject?
+    fun PyObject_Call(callable: PyObject, args: PyObject, kwargs: PyObject?): PyObject?
     fun PyObject_CallNoArgs(callable: PyObject): PyObject?
     fun PyObject_CallOneArg(callable: PyObject, arg: PyObject): PyObject?
     fun PyObject_CallObject(callable: PyObject, args: PyObject?): PyObject?
@@ -156,6 +160,9 @@ internal interface PythonEngineInterface : Library {
     // Class/Type
     fun PyType_FromSpec(spec: PyType_Spec): PyTypeObject?
     fun PyType_GetDict(type: PyTypeObject): PyObject?
+
+    // Errors
+    fun PyErr_GetRaisedException(): PyObject?
 
     companion object // Uses extension methods just in case
 }

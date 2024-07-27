@@ -2,6 +2,8 @@ package com.mylosoftworks.kpython.environment
 
 import com.mylosoftworks.kpython.PythonVersion
 import com.mylosoftworks.kpython.environment.pythonobjects.*
+import com.mylosoftworks.kpython.internal.engine.*
+import com.mylosoftworks.kpython.internal.engine.METH_KEYWORDS
 import com.mylosoftworks.kpython.internal.engine.METH_VARARGS
 import com.mylosoftworks.kpython.internal.engine.PythonEngineInterface
 import com.mylosoftworks.kpython.internal.engine.StartSymbol
@@ -106,9 +108,11 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 //        return convertFrom(input, T::class.java) as T
 //    }
 
-    fun convertFrom(input: PythonProxyObject, type: Class<*>): Any? {
+    fun convertFrom(input: PythonProxyObject?, type: Class<*>): Any? {
         val typeIsBool = type in arrayOf(Boolean::class.java, java.lang.Boolean::class.java)
         return when {
+            input == null -> null
+
             type == PythonProxyObject::class.java -> input
             KPythonProxy::class.java.isAssignableFrom(type) -> input.asInterface(type as Class<KPythonProxy>)
             engine.Py_IsNone(input.obj) -> null
@@ -119,6 +123,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
             type in arrayOf(java.lang.String::class.java, String::class.java) && engine.PyObject_IsInstance(input.obj, Str.obj) -> engine.PyUnicode_AsUTF8(input.obj)
             (type == Array::class.java || type.isArray) && engine.PyObject_IsInstance(input.obj, List.obj) -> readArray(input.obj, type.componentType)
             type == HashMap::class.java && engine.PyObject_IsInstance(input.obj, Dict.obj) -> readDict(input.obj)
+
             else -> input
         }
     }
@@ -149,7 +154,9 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
             is Long -> manualConvert(input, "L")!!
             is Int -> manualConvert(input, "i")!!
             is Boolean -> if (input) True else False
-            is Array<*> -> createList(*(input as Array<Any>))?.getKPythonProxyBase()!!
+            is Array<*> -> createList(*(input as Array<Any?>))!!.getKPythonProxyBase()
+            is HashMap<*, *> -> createDict(input as HashMap<Any?, Any?>).getKPythonProxyBase()
+
             else -> None
         }
     }
@@ -166,19 +173,20 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
             is Long -> "L" to input
             is Int -> "i" to input
             is Boolean -> "b" to if (input) True else False
-            is Array<*> -> "O" to (createList(*(input as Array<Any>))?.getKPythonProxyBase()?.obj ?: None.obj)
+            is Array<*> -> "O" to (createList(*(input as Array<Any?>))?.getKPythonProxyBase()?.obj ?: None.obj)
+            is HashMap<*, *> -> "O" to (createDict(input as HashMap<Any?, Any?>).getKPythonProxyBase().obj)
 
             else -> "O" to None
         }
     }
 
-    private fun createArray(items: Array<*>? = null): PyList {
-        val list = engine.PyList_new()
-        items?.forEach {
-            engine.PyList_Append(list ?: EmptyList.obj, convertTo(it)?.obj ?: None.obj)
-        }
-        return createProxyObject(list ?: EmptyList.obj, GCBehavior.ONLY_DEC).asInterface<PyList>()
-    }
+//    private fun createArray(items: Array<*>? = null): PyList {
+//        val list = engine.PyList_new()
+//        items?.forEach {
+//            engine.PyList_Append(list ?: EmptyList.obj, convertTo(it)?.obj ?: None.obj)
+//        }
+//        return createProxyObject(list ?: EmptyList.obj, GCBehavior.ONLY_DEC).asInterface<PyList>()
+//    }
 
     private fun createDict(items: HashMap<*, *>? = null): PyDict {
         val dict = engine.PyDict_New()
@@ -216,24 +224,39 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
     }
 
     // Creation functions
-    fun createTuple(vararg args: Any): PyTuple? {
+    fun createTuple(vararg args: Any?): PyTuple? {
         return convertArgs(*args)?.asInterface<PyTuple>()
     }
 
-    fun createList(vararg args: Any): PyList? {
+    fun createList(vararg args: Any?): PyList? {
         return convertArgs(*args, prefix = "[", postfix = "]")?.asInterface<PyList>()
     }
 
-    data class FunctionCallParams(val self: PythonProxyObject?, val args: PyTuple, val env: PyEnvironment)
-    class PyKotlinFunction(val env: PyEnvironment, val function: FunctionCallParams.() -> Any?) : PythonEngineInterface.PyCFunction {
-        override fun invoke(self: PyObject?, args: PyObject?): PyObject? {
-            return env.convertTo(function(FunctionCallParams(self?.let { env.createProxyObject(it) }, args?.let { env.createProxyObject(it).asInterface<PyTuple>() } ?: env.EmptyTuple.asInterface<PyTuple>(), env)))?.obj
+    data class FunctionCallParams(val self: PythonProxyObject?, val args: PyTuple, val kwargs: PyDict, val env: PyEnvironment)
+    class PyKotlinFunction(val env: PyEnvironment, val function: FunctionCallParams.() -> Any?) : PythonEngineInterface.PyCFunctionWithKwargs {
+        override fun invoke(self: PyObject?, args: PyObject?, kwargs: PyObject?): PyObject {
+            return env.convertTo(
+                function(
+                    FunctionCallParams(
+                        self?.let {
+                            env.createProxyObject(it)
+                                  },
+                        args?.let {
+                            env.createProxyObject(it).asInterface<PyTuple>()
+                        } ?: env.EmptyTuple.asInterface<PyTuple>(),
+                        kwargs?.let {
+                            env.createProxyObject(it).asInterface<PyDict>()
+                        } ?: env.EmptyDict.asInterface<PyDict>(),
+                        env
+                    )
+                )
+            ).obj
         }
     }
 
     fun createFunction(self: PythonProxyObject? = null, name: String = "", doc: String = "", function: FunctionCallParams.() -> Any?): PyCallable? {
         val callback = PyKotlinFunction(this, function)
-        val functionStruct = PythonEngineInterface.PyMethodDef.ByReference(name, callback, METH_VARARGS, doc)
+        val functionStruct = PythonEngineInterface.PyMethodDef.ByReference(name, callback, METH_VARARGS or METH_KEYWORDS, doc)
         return engine.PyCFunction_New(functionStruct, self?.obj ?: Str.asInterface<PyClass>().invoke()!!.obj)
             ?.let { createProxyObject(it, GCBehavior.ONLY_DEC).asInterface<PyCallable>() }
     }
@@ -333,9 +356,11 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
     // Mid-level bindings for fast access to functions, dictionaries, lists, and tuples
     inner class QuickAccess {
         // Functions
-        fun invoke(o: PythonProxyObject, vararg args: Any?): PythonProxyObject? {
-            val args2 = convertArgs(*args)
-            return engine.PyObject_CallObject(o.obj, args2?.obj)?.let { createProxyObject(it) }
+        fun invoke(o: PythonProxyObject, vararg args: Any?, kwargs: HashMap<String, Any?>? = null): PythonProxyObject? {
+            val usedArgs = convertArgs(*args) // Not allowed to be empty
+            val usedKwargs = kwargs?.let { createDict(it) } // Since this can be null
+            return engine.PyObject_Call(o.obj, usedArgs!!.obj, usedKwargs?.getKPythonProxyBase()?.obj)?.let { createProxyObject(it, GCBehavior.ONLY_DEC) } // New reference
+//            return engine.PyObject_CallObject(o.obj, args2?.obj)?.let { createProxyObject(it) }
         }
 
         // Dicts
@@ -397,6 +422,10 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 //            return engine.PyType_GetDict(o.obj)?.let {
 //                createProxyObject(it, GCBehavior.ONLY_DEC) // Borrowed, but given to kotlin
 //            }
+        }
+
+        fun errorOccurred(): PythonProxyObject? {
+            return engine.PyErr_GetRaisedException()?.let { createProxyObject(it, GCBehavior.FULL) }
         }
     }
 }

@@ -69,7 +69,7 @@ class PythonProxyHandler internal constructor(val obj: PythonProxyObject) : Invo
             // Method, invoke
             val methodName = getKotlinMember(method)!!.left!!.name
             if (methodName == "toString") return obj.toString() // Failsafe
-            return obj.invokeMethod(methodName, *argsSafe)?.let { obj.env.convertFrom(it, method.returnType) }
+            return obj.invokeMethod(methodName, *argsSafe)?.let { obj.env.convertFrom(it, method.returnType) } // TODO: Kwarg support through annotation @Kwarg(kwargIndex)
         }
     }
 }

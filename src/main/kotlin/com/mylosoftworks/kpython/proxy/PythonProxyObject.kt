@@ -64,13 +64,13 @@ open class PythonProxyObject internal constructor(val env: PyEnvironment, val ob
 //        return env.engine.PyObject_CallObject(method, env.convertArgs(*params)?.obj)?.let { env.createProxyObject(it) }
 //    }
 
-    fun invokeMethod(key: String, vararg params: Any?): PythonProxyObject? {
+    fun invokeMethod(key: String, vararg params: Any?, kwargs: HashMap<String, Any?>? = null): PythonProxyObject? {
         val method = this[key]!!
-        return env.quickAccess.invoke(method, *params)
+        return env.quickAccess.invoke(method, *params, kwargs = kwargs)
     }
 
-    fun invoke(vararg params: Any?): PythonProxyObject? {
-        return env.quickAccess.invoke(this, *params)
+    fun invoke(vararg params: Any?, kwargs: HashMap<String, Any?>? = null): PythonProxyObject? {
+        return env.quickAccess.invoke(this, *params, kwargs = kwargs)
     }
 
     fun createMethod(name: String, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Any?) {

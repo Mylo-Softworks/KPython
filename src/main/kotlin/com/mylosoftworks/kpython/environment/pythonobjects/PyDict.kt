@@ -27,7 +27,7 @@ interface PyDict : KPythonProxy {
     fun createMethodUnit(name: Any?, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Unit)
 
     @DontUsePython
-    fun invokeMethod(key: Any?, vararg args: Any): PythonProxyObject?
+    fun invokeMethod(key: Any?, vararg args: Any, kwargs: HashMap<String, Any?>? = null): PythonProxyObject?
 
     @DontUsePython
     fun containsKey(key: Any?): Boolean
@@ -68,9 +68,9 @@ interface PyDict : KPythonProxy {
             set(self, name, method.getKPythonProxyBase())
         }
 
-        fun invokeMethod(self: PythonProxyObject, key: Any?, vararg args: Any): PythonProxyObject? {
+        fun invokeMethod(self: PythonProxyObject, key: Any?, vararg args: Any, kwargs: HashMap<String, Any?>? = null): PythonProxyObject? {
 //            return self.asInterface<PyDict>()[key]!!.asInterface<PyCallable>()(*args)
-            return self.asInterface<PyDict>()[key]!!.invoke(*args)
+            return self.asInterface<PyDict>()[key]!!.invoke(*args, kwargs = kwargs)
         }
 
         fun containsKey(self: PythonProxyObject, key: Any?): Boolean {

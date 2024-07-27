@@ -13,6 +13,7 @@ Some high-level proxies are predefined, you can inherit or directly use these.
 * PyDict -> A python dictionary
 * PyList -> A python list
 * PyTuple -> A python tuple
+* PyModule -> A python module, with getDict() to get the module dict
 
 ## Accessing python attributes
 Python attributes can be declared by simply creating fields. If an attribute is always a string, simply declare it as a string.  

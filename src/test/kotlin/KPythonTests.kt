@@ -1,9 +1,6 @@
 import com.mylosoftworks.kpython.PythonVersion
 import com.mylosoftworks.kpython.environment.PyEnvironment
-import com.mylosoftworks.kpython.environment.pythonobjects.PyCallable
-import com.mylosoftworks.kpython.environment.pythonobjects.PyClass
-import com.mylosoftworks.kpython.environment.pythonobjects.PyEnterable
-import com.mylosoftworks.kpython.environment.pythonobjects.createTyped
+import com.mylosoftworks.kpython.environment.pythonobjects.*
 import com.mylosoftworks.kpython.proxy.KPythonProxy
 import org.junit.jupiter.api.Test
 
@@ -123,12 +120,56 @@ class KPythonTests {
 
         val pyClass = env.createClass("A")
 
-        pyClass?.getKPythonProxyBase()?.createMethod("testFunc") {
-            return@createMethod "The ${self?.get("__class__")?.get("__name__")} object has a function!"
+//        pyClass?.getKPythonProxyBase()?.createMethod("testFunc") {
+//            return@createMethod args
+////            return@createMethod "Confirm this string!"
+//        }
+
+        pyClass?.getDict()?.createMethod("testFunc") {
+            return@createMethod args
         }
 
         val inst = pyClass?.invoke()
+
+        inst?.set("test", env.convertTo("Confirm me!"))
+
         println(inst?.invokeMethod("testFunc").toString())
         assert(inst?.invokeMethod("testFunc").toString() == "The ${pyClass?.__name__} object has a function!")
+    }
+
+    @Test
+    fun testKwargs() {
+        val env = PyEnvironment(PythonVersion.python312)
+
+        env.file("""
+            class A:
+                def test(self, **kwargs):
+                    return kwargs
+        """.trimIndent())
+        val pyClass = env.globals["A"]!!.asInterface<PyClass>()
+        val inst = pyClass()
+
+        val kwargs = hashMapOf<String, Any?>("test1" to "Value!")
+
+        val result = inst?.invokeMethod("test", kwargs = kwargs)
+        val convertedResult = env.convertFrom(result, HashMap::class.java)
+
+        assert(convertedResult.toString() == kwargs.toString()) // Using toString since hashmaps don't compare well here, since the content is just strings this won't be a problem
+    }
+
+    @Test
+    fun testKwargsFromKotlinFun() {
+        val env = PyEnvironment(PythonVersion.python312)
+
+        val pyFun = env.createFunction {
+            return@createFunction kwargs // pass-through for kwargs
+        }
+
+        val testString = "Confirm me!"
+
+        val kwargs = hashMapOf<String, Any?>("test" to testString)
+
+        val result = pyFun?.invoke(kwargs = kwargs)?.asInterface<PyDict>()
+        assert(result?.get("test")?.toString() == testString)
     }
 }

@@ -9,11 +9,11 @@ import com.mylosoftworks.kpython.proxy.PythonProxyObject
  */
 interface PyCallable : KPythonProxy {
     @DontUsePython
-    operator fun invoke(vararg args: Any?): PythonProxyObject?
+    operator fun invoke(vararg args: Any?, kwargs: HashMap<String, Any?>? = null): PythonProxyObject?
 
     companion object {
-        fun invoke(self: PythonProxyObject, vararg args: Any?): PythonProxyObject? {
-            return self.invoke(*args)
+        fun invoke(self: PythonProxyObject, vararg args: Any?, kwargs: HashMap<String, Any?>? = null): PythonProxyObject? {
+            return self.invoke(*args, kwargs = kwargs)
         }
     }
 }
