@@ -24,7 +24,7 @@ interface PyList : KPythonProxy {
     fun size(): Long
 
     @DontUsePython
-    operator fun get(key: Long): PythonProxyObject?
+    operator fun get(key: Long): PythonProxyObject
 
     @DontUsePython
     operator fun set(key: Long, value: Any?)
@@ -40,7 +40,7 @@ interface PyList : KPythonProxy {
 //            }
         }
 
-        fun get(self: PythonProxyObject, key: Long): PythonProxyObject? {
+        fun get(self: PythonProxyObject, key: Long): PythonProxyObject {
             return self.env.quickAccess.listGetItem(self, key)
 //            return self.let {
 //                it.env.engine.PyList_GetItem(self.obj, key.toLong())?.let { it2 ->
@@ -68,7 +68,7 @@ class PythonListIterator(val list: PyList) : Iterator<PythonProxyObject?> {
         return idx.get() < size
     }
 
-    override fun next(): PythonProxyObject? {
+    override fun next(): PythonProxyObject {
         return list[idx.getAndIncrement()]
     }
 }

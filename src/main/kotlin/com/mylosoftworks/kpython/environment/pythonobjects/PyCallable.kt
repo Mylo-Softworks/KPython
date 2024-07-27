@@ -12,7 +12,7 @@ interface PyCallable : KPythonProxy {
     operator fun invoke(vararg args: Any?, kwargs: HashMap<String, Any?>? = null): PythonProxyObject?
 
     companion object {
-        fun invoke(self: PythonProxyObject, vararg args: Any?, kwargs: HashMap<String, Any?>? = null): PythonProxyObject? {
+        fun invoke(self: PythonProxyObject, vararg args: Any?, kwargs: HashMap<String, Any?>? = null): PythonProxyObject {
             return self.invoke(*args, kwargs = kwargs)
         }
     }

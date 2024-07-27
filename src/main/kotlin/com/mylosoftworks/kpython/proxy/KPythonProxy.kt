@@ -16,7 +16,7 @@ interface KPythonProxy {
     fun __dir__(): PyList
 
     @DontUsePython
-    fun getAttribute(name: String): PythonProxyObject?
+    fun getAttribute(name: String): PythonProxyObject
 
     @DontUsePython
     fun setAttribute(name: String, value: Any?)
@@ -25,7 +25,7 @@ interface KPythonProxy {
     fun hasAttribute(name: String): Boolean
 
     companion object {
-        fun getAttribute(self: PythonProxyObject, name: String): PythonProxyObject? {
+        fun getAttribute(self: PythonProxyObject, name: String): PythonProxyObject {
             return self[name]
         }
 

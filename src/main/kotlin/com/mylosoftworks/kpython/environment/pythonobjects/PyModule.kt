@@ -9,7 +9,7 @@ interface PyModule : KPythonProxy {
     fun getDict(): PyDict?
 
     companion object {
-        fun getDict(self: PythonProxyObject): PythonProxyObject? {
+        fun getDict(self: PythonProxyObject): PythonProxyObject {
             return self.env.quickAccess.moduleGetDict(self)
         }
     }

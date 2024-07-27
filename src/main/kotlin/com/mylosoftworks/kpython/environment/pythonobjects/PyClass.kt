@@ -11,10 +11,10 @@ interface PyClass : PyCallable {
     var __name__: String
 
     @DontUsePython
-    fun getDict(): PyDict?
+    fun getDict(): PyDict
 
     companion object {
-        fun getDict(self: PythonProxyObject): PythonProxyObject? {
+        fun getDict(self: PythonProxyObject): PythonProxyObject {
             return self.env.quickAccess.typeGetDict(self)
         }
     }

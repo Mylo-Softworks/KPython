@@ -11,37 +11,37 @@ interface PyTuple : KPythonProxy {
     fun size(): Long
 
     @DontUsePython
-    operator fun get(idx: Long): PythonProxyObject?
+    operator fun get(idx: Long): PythonProxyObject
 
     @DontUsePython
-    operator fun component1(): PythonProxyObject?
+    operator fun component1(): PythonProxyObject
 
     @DontUsePython
-    operator fun component2(): PythonProxyObject?
+    operator fun component2(): PythonProxyObject
 
     @DontUsePython
-    operator fun component3(): PythonProxyObject?
+    operator fun component3(): PythonProxyObject
 
     @DontUsePython
-    operator fun component4(): PythonProxyObject?
+    operator fun component4(): PythonProxyObject
 
     @DontUsePython
-    operator fun component5(): PythonProxyObject?
+    operator fun component5(): PythonProxyObject
 
     @DontUsePython
-    operator fun component6(): PythonProxyObject?
+    operator fun component6(): PythonProxyObject
 
     @DontUsePython
-    operator fun component7(): PythonProxyObject?
+    operator fun component7(): PythonProxyObject
 
     @DontUsePython
-    operator fun component8(): PythonProxyObject?
+    operator fun component8(): PythonProxyObject
 
     @DontUsePython
-    operator fun component9(): PythonProxyObject?
+    operator fun component9(): PythonProxyObject
 
     @DontUsePython
-    operator fun component10(): PythonProxyObject?
+    operator fun component10(): PythonProxyObject
 
     @DontUsePython
     operator fun iterator(): Iterator<PythonProxyObject>
@@ -54,7 +54,7 @@ interface PyTuple : KPythonProxy {
 //            }
         }
 
-        fun get(self: PythonProxyObject, idx: Long): PythonProxyObject? {
+        fun get(self: PythonProxyObject, idx: Long): PythonProxyObject {
             return self.env.quickAccess.tupleGetItem(self, idx)
 //            return self.let {
 //                it.env.engine.PyTuple_GetItem(it.obj, idx)?.let { it2 ->
@@ -63,43 +63,43 @@ interface PyTuple : KPythonProxy {
 //            }
         }
 
-        fun component1(self: PythonProxyObject): PythonProxyObject? {
+        fun component1(self: PythonProxyObject): PythonProxyObject {
             return get(self, 0)
         }
 
-        fun component2(self: PythonProxyObject): PythonProxyObject? {
+        fun component2(self: PythonProxyObject): PythonProxyObject {
             return get(self, 1)
         }
 
-        fun component3(self: PythonProxyObject): PythonProxyObject? {
+        fun component3(self: PythonProxyObject): PythonProxyObject {
             return get(self, 2)
         }
 
-        fun component4(self: PythonProxyObject): PythonProxyObject? {
+        fun component4(self: PythonProxyObject): PythonProxyObject {
             return get(self, 3)
         }
 
-        fun component5(self: PythonProxyObject): PythonProxyObject? {
+        fun component5(self: PythonProxyObject): PythonProxyObject {
             return get(self, 4)
         }
 
-        fun component6(self: PythonProxyObject): PythonProxyObject? {
+        fun component6(self: PythonProxyObject): PythonProxyObject {
             return get(self, 5)
         }
 
-        fun component7(self: PythonProxyObject): PythonProxyObject? {
+        fun component7(self: PythonProxyObject): PythonProxyObject {
             return get(self, 6)
         }
 
-        fun component8(self: PythonProxyObject): PythonProxyObject? {
+        fun component8(self: PythonProxyObject): PythonProxyObject {
             return get(self, 7)
         }
 
-        fun component9(self: PythonProxyObject): PythonProxyObject? {
+        fun component9(self: PythonProxyObject): PythonProxyObject {
             return get(self, 8)
         }
 
-        fun component10(self: PythonProxyObject): PythonProxyObject? {
+        fun component10(self: PythonProxyObject): PythonProxyObject {
             return get(self, 10)
         }
 
@@ -109,15 +109,15 @@ interface PyTuple : KPythonProxy {
     }
 }
 
-class PythonTupleIterator(val list: PyTuple) : Iterator<PythonProxyObject?> {
-    val idx = AtomicLong(0)
-    val size = list.size()
+class PythonTupleIterator(private val list: PyTuple) : Iterator<PythonProxyObject?> {
+    private val idx = AtomicLong(0)
+    private val size = list.size()
 
     override fun hasNext(): Boolean {
         return idx.get() < size
     }
 
-    override fun next(): PythonProxyObject? {
+    override fun next(): PythonProxyObject {
         return list[idx.getAndIncrement()]
     }
 }

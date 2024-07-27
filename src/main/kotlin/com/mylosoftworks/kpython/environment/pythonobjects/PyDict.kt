@@ -2,7 +2,6 @@ package com.mylosoftworks.kpython.environment.pythonobjects
 
 import com.mylosoftworks.kpython.environment.PyEnvironment
 import com.mylosoftworks.kpython.proxy.DontUsePython
-import com.mylosoftworks.kpython.proxy.GCBehavior
 import com.mylosoftworks.kpython.proxy.KPythonProxy
 import com.mylosoftworks.kpython.proxy.PythonProxyObject
 
@@ -15,7 +14,7 @@ interface PyDict : KPythonProxy {
     fun getSize(): Long
 
     @DontUsePython
-    operator fun get(key: Any?): PythonProxyObject?
+    operator fun get(key: Any?): PythonProxyObject
 
     @DontUsePython
     operator fun set(key: Any?, value: Any?)
@@ -27,7 +26,7 @@ interface PyDict : KPythonProxy {
     fun createMethodUnit(name: Any?, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Unit)
 
     @DontUsePython
-    fun invokeMethod(key: Any?, vararg args: Any, kwargs: HashMap<String, Any?>? = null): PythonProxyObject?
+    fun invokeMethod(key: Any?, vararg args: Any, kwargs: HashMap<String, Any?>? = null): PythonProxyObject
 
     @DontUsePython
     fun containsKey(key: Any?): Boolean
@@ -46,7 +45,7 @@ interface PyDict : KPythonProxy {
 //            }
         }
 
-        fun get(self: PythonProxyObject, key: Any): PythonProxyObject? {
+        fun get(self: PythonProxyObject, key: Any): PythonProxyObject {
             return self.env.quickAccess.dictGetItem(self, key)
 //            return self.let {
 //                it.env.engine.PyDict_GetItem(it.obj, it.env.convertTo(key)!!.obj)?.let { it1 ->
@@ -74,9 +73,9 @@ interface PyDict : KPythonProxy {
             set(self, name, method.getKPythonProxyBase())
         }
 
-        fun invokeMethod(self: PythonProxyObject, key: Any?, vararg args: Any, kwargs: HashMap<String, Any?>? = null): PythonProxyObject? {
+        fun invokeMethod(self: PythonProxyObject, key: Any?, vararg args: Any, kwargs: HashMap<String, Any?>? = null): PythonProxyObject {
 //            return self.asInterface<PyDict>()[key]!!.asInterface<PyCallable>()(*args)
-            return self.asInterface<PyDict>()[key]!!.invoke(*args, kwargs = kwargs)
+            return self.asInterface<PyDict>()[key].invoke(*args, kwargs = kwargs)
         }
 
         fun containsKey(self: PythonProxyObject, key: Any?): Boolean {
@@ -93,7 +92,7 @@ interface PyDict : KPythonProxy {
 
             val outDict = HashMap<PythonProxyObject, PythonProxyObject>()
             for (key in keys) {
-                outDict[key] = selfProxy[key]!!
+                outDict[key] = selfProxy[key]
             }
             return outDict
         }

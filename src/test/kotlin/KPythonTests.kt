@@ -1,8 +1,6 @@
 import com.mylosoftworks.kpython.PythonVersion
 import com.mylosoftworks.kpython.environment.PyEnvironment
-import com.mylosoftworks.kpython.environment.PyEnvironment.FunctionCallParams
 import com.mylosoftworks.kpython.environment.pythonobjects.*
-import com.mylosoftworks.kpython.internal.engine.Py_tp_init
 import com.mylosoftworks.kpython.proxy.KPythonProxy
 import org.junit.jupiter.api.Test
 
@@ -38,7 +36,7 @@ class KPythonTests {
                     return "This is an example object with return!"
         """.trimIndent())
 
-        val pyClass = env.globals["Test"]!!.asInterface<PyClass>()
+        val pyClass = env.globals["Test"].asInterface<PyClass>()
 //        val inst = pyClass()!!.asInterface<PyCallable>()
         val inst = pyClass.createTyped<PyCallable>()!!
         val result = inst()
@@ -57,7 +55,7 @@ class KPythonTests {
             return@createFunction arg1.toString().reversed()
         }
 
-        val result = reverseFunction?.invoke(test)
+        val result = reverseFunction.invoke(test)
 
         assert(test.reversed() == result.toString())
     }
@@ -72,7 +70,7 @@ class KPythonTests {
             compString
         }
 
-        val returnValue = env.globals.invokeMethod("get_kotlin_string")!!.toJvmRepresentation<String>()
+        val returnValue = env.globals.invokeMethod("get_kotlin_string").toJvmRepresentation<String>()
         assert(compString == returnValue)
     }
 
@@ -89,7 +87,7 @@ class KPythonTests {
                     pass
         """.trimIndent())
 
-        val A = env.globals["A"]!!.asInterface<PyClass>()
+        val A = env.globals["A"].asInterface<PyClass>()
         val inst = A()!!.asInterface<PyEnterable>()
 
         inst.with {
@@ -140,7 +138,7 @@ class KPythonTests {
                 def test(self, **kwargs):
                     return kwargs
         """.trimIndent())
-        val pyClass = env.globals["A"]!!.asInterface<PyClass>()
+        val pyClass = env.globals["A"].asInterface<PyClass>()
         val inst = pyClass()
 
         val kwargs = hashMapOf<String, Any?>("test1" to "Value!")
@@ -163,7 +161,7 @@ class KPythonTests {
 
         val kwargs = hashMapOf<String, Any?>("test" to testString)
 
-        val result = pyFun?.invoke(kwargs = kwargs)?.asInterface<PyDict>()
+        val result = pyFun.invoke(kwargs = kwargs)?.asInterface<PyDict>()
         assert(result?.get("test")?.toString() == testString)
     }
 
@@ -171,13 +169,13 @@ class KPythonTests {
     fun testParseArguments() {
         val env = PyEnvironment(PythonVersion.python312)
 
-        val functionCallParams = PyEnvironment.FunctionCallParams(null, env.createTuple("first", "second")!!, env.convertToI<PyDict>(
+        val functionCallParams = PyEnvironment.FunctionCallParams(null, env.createTuple("first", "second"), env.convertToI<PyDict>(
             hashMapOf<String, Any?>("name" to "one", "another" to 2)
         ), env)
 
         val parsed = functionCallParams.parseArgumentsByDefinition("arg1, *args, name, **kwargs")
 
-        assert(parsed!!["arg1"].toString() == "first")
+        assert(parsed["arg1"].toString() == "first")
         assert(parsed["args"]!!.asInterface<PyList>()[0].toString() == "second") // First item in args should be "second"
         assert(parsed["name"].toString() == "one")
         assert(parsed["kwargs"]!!.asInterface<PyDict>()["another"].toString() == "2")

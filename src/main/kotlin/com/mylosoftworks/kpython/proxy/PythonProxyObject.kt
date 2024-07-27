@@ -48,8 +48,8 @@ open class PythonProxyObject internal constructor(val env: PyEnvironment, val ob
         return Proxy.newProxyInstance(clazz.classLoader, arrayOf(clazz), PythonProxyHandler(this))
     }
 
-    operator fun get(key: String): PythonProxyObject? {
-        return env.engine.PyObject_GetAttrString(obj, key)?.let {env.createProxyObject(it) }
+    operator fun get(key: String): PythonProxyObject {
+        return env.engine.PyObject_GetAttrString(obj, key)?.let {env.createProxyObject(it) } ?: env.quickAccess.throwAutoError()
     }
 
     operator fun set(key: String, value: PythonProxyObject) {
@@ -65,12 +65,12 @@ open class PythonProxyObject internal constructor(val env: PyEnvironment, val ob
 //        return env.engine.PyObject_CallObject(method, env.convertArgs(*params)?.obj)?.let { env.createProxyObject(it) }
 //    }
 
-    fun invokeMethod(key: String, vararg params: Any?, kwargs: HashMap<String, Any?>? = null): PythonProxyObject? {
-        val method = this[key]!!
+    fun invokeMethod(key: String, vararg params: Any?, kwargs: HashMap<String, Any?>? = null): PythonProxyObject {
+        val method = this[key]
         return env.quickAccess.invoke(method, *params, kwargs = kwargs)
     }
 
-    fun invoke(vararg params: Any?, kwargs: HashMap<String, Any?>? = null): PythonProxyObject? {
+    fun invoke(vararg params: Any?, kwargs: HashMap<String, Any?>? = null): PythonProxyObject {
         return env.quickAccess.invoke(this, *params, kwargs = kwargs)
     }
 
