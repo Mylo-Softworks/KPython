@@ -19,6 +19,12 @@ internal enum class StartSymbol(val value: Int) {
 
 internal const val METH_VARARGS = 0x0001
 internal const val METH_KEYWORDS = 0x0002
+internal const val METH_CLASS = 0x0010
+internal const val METH_STATIC = 0x0020
+
+internal const val METH_METHOD = 0x0200
+
+internal const val Py_tp_init = 60 // https://github.com/python/cpython/blob/4e7550934941050f54c86338cd5e40cd565ceaf2/Include/typeslots.h#L61
 
 //internal const val Py_CONSTANT_NONE             = 0
 //internal const val Py_CONSTANT_FALSE            = 1

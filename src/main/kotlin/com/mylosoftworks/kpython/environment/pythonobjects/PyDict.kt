@@ -65,12 +65,12 @@ interface PyDict : KPythonProxy {
         }
 
         fun createMethod(self: PythonProxyObject, name: Any?, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Any?) {
-            val method = self.env.createFunction(self, name.toString(), docs, code)!!
+            val method = self.env.createFunction(self, name.toString(), docs, code)
             set(self, name, method.getKPythonProxyBase())
         }
 
         fun createMethodUnit(self: PythonProxyObject, name: Any?, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Unit) {
-            val method = self.env.createFunctionUnit(self, name.toString(), docs, code)!!
+            val method = self.env.createFunctionUnit(self, name.toString(), docs, code)
             set(self, name, method.getKPythonProxyBase())
         }
 

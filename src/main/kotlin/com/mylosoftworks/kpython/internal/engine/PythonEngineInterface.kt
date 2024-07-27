@@ -24,8 +24,10 @@ internal interface PythonEngineInterface : Library {
     @Structure.FieldOrder("slot", "pfunc")
     open class PyType_Slot(
         @JvmField var slot: Int,
-        @JvmField var pfunc: Pointer?
-    ): Structure(), Structure.ByReference
+        @JvmField var pfunc: PyCFunctionWithKwargs?
+    ): Structure(), Structure.ByReference {
+        constructor() : this(0, null)
+    }
 
     @Structure.FieldOrder("name", "basicSize", "itemSize", "flags", "slots")
     open class PyType_Spec(
@@ -33,7 +35,8 @@ internal interface PythonEngineInterface : Library {
         @JvmField var basicSize: Int,
         @JvmField var itemSize: Int,
         @JvmField var flags: Int, // Uint
-        @JvmField var slots: PyType_Slot? // Array of PyType_Slot structures. Terminated by the special slot value {0, NULL}.
+        @JvmField var slots: Array<PyType_Slot>, // Array of PyType_Slot structures. Terminated by the special slot value {0, NULL}.
+//        @JvmField var slots: PyType_Slot, // Array of PyType_Slot structures. Terminated by the special slot value {0, NULL}.
     ): Structure(), Structure.ByReference
 
     // init and finalize
@@ -117,7 +120,8 @@ internal interface PythonEngineInterface : Library {
     fun PyFunction_GetCode(op: PyObject): PyObject
 
     // c functions
-    fun PyCFunction_New(ml: PyMethodDef.ByReference, self: PyObject): PyObject?
+    fun PyCFunction_New(ml: PyMethodDef.ByReference, self: PyObject?): PyObject?
+//    fun PyCMethod_New(ml: PyMethodDef.ByReference, self: PyObject, module: PyObject?, cls: PyTypeObject?): PyObject?
 
     // objects
     fun PyObject_HasAttr(o: PyObject, attr_name: PyObject): Boolean
@@ -160,6 +164,7 @@ internal interface PythonEngineInterface : Library {
     // Class/Type
     fun PyType_FromSpec(spec: PyType_Spec): PyTypeObject?
     fun PyType_GetDict(type: PyTypeObject): PyObject?
+    fun PyType_GetSlot(type: PyTypeObject, slot: Int): Pointer
 
     // Errors
     fun PyErr_GetRaisedException(): PyObject?

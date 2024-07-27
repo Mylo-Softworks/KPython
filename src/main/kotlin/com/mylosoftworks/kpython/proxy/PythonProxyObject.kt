@@ -1,6 +1,7 @@
 package com.mylosoftworks.kpython.proxy
 
 import com.mylosoftworks.kpython.environment.PyEnvironment
+import com.mylosoftworks.kpython.environment.pythonobjects.PyClass
 import com.mylosoftworks.kpython.internal.engine.pythondefs.PyObject
 import java.lang.reflect.Proxy
 import kotlin.reflect.KClass
@@ -74,12 +75,12 @@ open class PythonProxyObject internal constructor(val env: PyEnvironment, val ob
     }
 
     fun createMethod(name: String, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Any?) {
-        val method = env.createFunction(this, name, docs, code)!!
+        val method = env.createFunction(this, name, docs, code)
         set(name, method.getKPythonProxyBase())
     }
 
     fun createMethodUnit(name: String, docs: String = "", code: PyEnvironment. FunctionCallParams.() -> Unit) {
-        val method = env.createFunctionUnit(this, name, docs, code)!!
+        val method = env.createFunctionUnit(this, name, docs, code)
         set(name, method.getKPythonProxyBase())
     }
 

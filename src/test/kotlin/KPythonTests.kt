@@ -1,6 +1,8 @@
 import com.mylosoftworks.kpython.PythonVersion
 import com.mylosoftworks.kpython.environment.PyEnvironment
+import com.mylosoftworks.kpython.environment.PyEnvironment.FunctionCallParams
 import com.mylosoftworks.kpython.environment.pythonobjects.*
+import com.mylosoftworks.kpython.internal.engine.Py_tp_init
 import com.mylosoftworks.kpython.proxy.KPythonProxy
 import org.junit.jupiter.api.Test
 
@@ -118,23 +120,15 @@ class KPythonTests {
     fun testCreateClass() {
         val env = PyEnvironment(PythonVersion.python312)
 
-        val pyClass = env.createClass("A")
-
-//        pyClass?.getKPythonProxyBase()?.createMethod("testFunc") {
-//            return@createMethod args
-////            return@createMethod "Confirm this string!"
-//        }
-
-        pyClass?.getDict()?.createMethod("testFunc") {
-            return@createMethod args
+        val pyClass = env.createClass("A_Class") {
+            self?.createMethod("whoami") {
+                return@createMethod self?.asInterface<KPythonProxy>()?.__class__?.__name__
+            }
         }
 
-        val inst = pyClass?.invoke()
-
-        inst?.set("test", env.convertTo("Confirm me!"))
-
-        println(inst?.invokeMethod("testFunc").toString())
-        assert(inst?.invokeMethod("testFunc").toString() == "The ${pyClass?.__name__} object has a function!")
+        val inst = pyClass()
+        val result = inst?.invokeMethod("whoami")
+        assert(result.toString() == "A_Class")
     }
 
     @Test
