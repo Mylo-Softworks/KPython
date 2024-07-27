@@ -91,7 +91,7 @@ internal interface PythonEngineInterface : Library {
     fun PyDict_GetItemString(p: PyObject, key: String): PyObject?
     fun PyDict_SetDefault(p: PyObject, key: PyObject, defaultObject: PyObject): PyObject?
     fun PyDict_Items(p: PyObject): PyObject?
-    fun PyDict_Keys(p: PyObject): PyObject?
+    fun PyDict_Keys(p: PyObject): PyObject
     fun PyDict_Values(p: PyObject): PyObject?
     fun PyDict_Size(p: PyObject): Py_ssize_t
 

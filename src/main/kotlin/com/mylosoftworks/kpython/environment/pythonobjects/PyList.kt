@@ -65,11 +65,10 @@ class PythonListIterator(val list: PyList) : Iterator<PythonProxyObject?> {
     val size = list.size()
 
     override fun hasNext(): Boolean {
-        return idx.get() < size - 1
+        return idx.get() < size
     }
 
     override fun next(): PythonProxyObject? {
-        return list[idx.incrementAndGet()]
+        return list[idx.getAndIncrement()]
     }
-
 }

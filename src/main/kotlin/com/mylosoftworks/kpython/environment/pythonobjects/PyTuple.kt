@@ -3,6 +3,7 @@ package com.mylosoftworks.kpython.environment.pythonobjects
 import com.mylosoftworks.kpython.proxy.DontUsePython
 import com.mylosoftworks.kpython.proxy.KPythonProxy
 import com.mylosoftworks.kpython.proxy.PythonProxyObject
+import java.util.concurrent.atomic.AtomicLong
 
 interface PyTuple : KPythonProxy {
 
@@ -41,6 +42,9 @@ interface PyTuple : KPythonProxy {
 
     @DontUsePython
     operator fun component10(): PythonProxyObject?
+
+    @DontUsePython
+    operator fun iterator(): Iterator<PythonProxyObject>
 
     companion object {
         fun size(self: PythonProxyObject): Long {
@@ -98,5 +102,22 @@ interface PyTuple : KPythonProxy {
         fun component10(self: PythonProxyObject): PythonProxyObject? {
             return get(self, 10)
         }
+
+        fun iterator(self: PythonProxyObject): Iterator<PythonProxyObject?> {
+            return PythonTupleIterator(self.asInterface<PyTuple>())
+        }
+    }
+}
+
+class PythonTupleIterator(val list: PyTuple) : Iterator<PythonProxyObject?> {
+    val idx = AtomicLong(0)
+    val size = list.size()
+
+    override fun hasNext(): Boolean {
+        return idx.get() < size
+    }
+
+    override fun next(): PythonProxyObject? {
+        return list[idx.getAndIncrement()]
     }
 }

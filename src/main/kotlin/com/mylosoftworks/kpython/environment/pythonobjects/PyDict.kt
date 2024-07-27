@@ -32,6 +32,12 @@ interface PyDict : KPythonProxy {
     @DontUsePython
     fun containsKey(key: Any?): Boolean
 
+    @DontUsePython
+    fun getKeys(): PyList
+
+    @DontUsePython
+    fun getKVPairs(): HashMap<PythonProxyObject, PythonProxyObject>
+
     companion object {
         fun getSize(self: PythonProxyObject): Long {
             return self.env.quickAccess.dictGetSize(self)
@@ -75,6 +81,21 @@ interface PyDict : KPythonProxy {
 
         fun containsKey(self: PythonProxyObject, key: Any?): Boolean {
             return self.env.quickAccess.dictContainsKey(self, key)
+        }
+
+        fun getKeys(self: PythonProxyObject): PyList {
+            return self.env.quickAccess.dictGetKeys(self)
+        }
+
+        fun getKVPairs(self: PythonProxyObject): HashMap<PythonProxyObject, PythonProxyObject> {
+            val keys = self.env.quickAccess.dictGetKeys(self)
+            val selfProxy = self.asInterface<PyDict>()
+
+            val outDict = HashMap<PythonProxyObject, PythonProxyObject>()
+            for (key in keys) {
+                outDict[key] = selfProxy[key]!!
+            }
+            return outDict
         }
     }
 }

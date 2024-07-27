@@ -13,6 +13,7 @@ import com.mylosoftworks.kpython.proxy.GCBehavior
 import com.mylosoftworks.kpython.proxy.KPythonProxy
 import com.mylosoftworks.kpython.proxy.PythonProxyObject
 import java.nio.file.Paths
+import java.util.regex.Pattern
 
 /**
  * Represents a python environment, only one can exist at a time per process currently.
@@ -128,8 +129,8 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         }
     }
 
-    inline fun <reified T: KPythonProxy> convertTo(input: Any?): T? {
-        return convertTo(input)?.asInterface<T>()
+    inline fun <reified T: KPythonProxy> convertToI(input: Any?): T {
+        return convertTo(input).asInterface<T>()
     }
 
     fun convertArgs(vararg args: Any?, prefix: String = "(", postfix: String = ")"): PythonProxyObject? {
@@ -232,7 +233,87 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         return convertArgs(*args, prefix = "[", postfix = "]")?.asInterface<PyList>()
     }
 
-    data class FunctionCallParams(val self: PythonProxyObject?, val args: PyTuple, val kwargs: PyDict, val env: PyEnvironment)
+    data class FunctionCallParams(val self: PythonProxyObject?, val args: PyTuple, val kwargs: PyDict, val env: PyEnvironment) {
+        /**
+         * Parses python function call arguments by python definition style.
+         *
+         * Example: `parseArgumentsByDefinition("arg1, arg2, arg3, /, **kwargs")`
+         * @return A HashMap with the names as keys, values as values. If not provided, the key will not exist.
+         */
+        fun parseArgumentsByDefinition(definition: String): HashMap<String, PythonProxyObject>? {
+            val split = definition.split(Regex("\\s*,\\s*"))
+
+            val leftHandArgs = mutableListOf<String>() // Everything to the left of either / or *args
+            val kwOnlyArgs = mutableListOf<String>() // Everything to the right of either / or *args
+            var leftHandIsPositionalOnly = false // If contains / or *args, will be true
+            var kwargsName: String? = null // If contains **kwargs, will be kwargs
+            var varargsName: String? = null // If contains *args, will be args
+
+            for (str in split) {
+                when {
+                    str.startsWith("**") -> {
+                        kwargsName = str.removePrefix("**")
+                        // Completed foreach since kwargs must be last
+                        break
+                    }
+                    str.startsWith("*") -> {
+                        varargsName = str.removePrefix("*")
+                        leftHandIsPositionalOnly = true // From this point on
+                    }
+                    str.equals("/") -> {
+                        leftHandIsPositionalOnly = true // From this point on
+                    }
+                    else -> {
+                        if (leftHandIsPositionalOnly) {
+                            kwOnlyArgs.add(str)
+                        }
+                        else {
+                            leftHandArgs.add(str)
+                        }
+                    }
+                }
+            }
+
+            val outMap = HashMap<String, PythonProxyObject>()
+
+            // Lets first use positional args
+            val argCount = args.size()
+            if(leftHandArgs.size > argCount && varargsName == null) return null // FAIL
+            val max: Int? = if (varargsName == null) null else leftHandArgs.size - 1
+            val collectedVArgs = mutableListOf<PythonProxyObject>()
+            for ((idx, value) in args.iterator().withIndex()) {
+                if (max != null && idx > max) {
+                    collectedVArgs.add(value) // Add to varargs
+                }
+                else {
+                    outMap[leftHandArgs[idx]] = value
+                }
+            }
+
+            if (varargsName != null) outMap[varargsName] = env.convertTo(collectedVArgs.toTypedArray())
+
+
+            // Now lets read keyword args
+            val kvPairs = kwargs.getKVPairs()
+            val collectedKWArgs = hashMapOf<String, PythonProxyObject>()
+            val availableKWArgs = if (leftHandIsPositionalOnly) kwOnlyArgs else leftHandArgs.toMutableList().let { it.subList(argCount.toInt(), it.size) }.apply { addAll(kwOnlyArgs) }
+            for ((key, value) in kvPairs) {
+                val keyTS = key.toString()
+                if (keyTS in availableKWArgs) {
+                    outMap[keyTS] = value
+                }
+                else {
+                    collectedKWArgs[keyTS] = value
+                }
+            }
+
+            if (kwargsName != null) outMap[kwargsName] = env.convertTo(collectedKWArgs)
+
+            return outMap
+        }
+    }
+
+
     class PyKotlinFunction(val env: PyEnvironment, val function: FunctionCallParams.() -> Any?) : PythonEngineInterface.PyCFunctionWithKwargs {
         override fun invoke(self: PyObject?, args: PyObject?, kwargs: PyObject?): PyObject {
             return env.convertTo(
@@ -382,6 +463,10 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 
         fun dictContainsKey(o: PythonProxyObject, key: Any?): Boolean {
             return engine.PyDict_Contains(o.obj, convertTo(key)!!.obj) == 1
+        }
+
+        fun dictGetKeys(o: PythonProxyObject): PyList {
+            return engine.PyDict_Keys(o.obj).let { createProxyObject(it, GCBehavior.ONLY_DEC) }.asInterface<PyList>()
         }
 
         // lists

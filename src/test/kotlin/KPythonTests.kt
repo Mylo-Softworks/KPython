@@ -172,4 +172,20 @@ class KPythonTests {
         val result = pyFun?.invoke(kwargs = kwargs)?.asInterface<PyDict>()
         assert(result?.get("test")?.toString() == testString)
     }
+
+    @Test
+    fun testParseArguments() {
+        val env = PyEnvironment(PythonVersion.python312)
+
+        val functionCallParams = PyEnvironment.FunctionCallParams(null, env.createTuple("first", "second")!!, env.convertToI<PyDict>(
+            hashMapOf<String, Any?>("name" to "one", "another" to 2)
+        ), env)
+
+        val parsed = functionCallParams.parseArgumentsByDefinition("arg1, *args, name, **kwargs")
+
+        assert(parsed!!["arg1"].toString() == "first")
+        assert(parsed["args"]!!.asInterface<PyList>()[0].toString() == "second") // First item in args should be "second"
+        assert(parsed["name"].toString() == "one")
+        assert(parsed["kwargs"]!!.asInterface<PyDict>()["another"].toString() == "2")
+    }
 }
