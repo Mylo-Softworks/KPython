@@ -93,6 +93,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
      */
     fun file(script: String, globals: PyDict = this.globals, locals: PyDict = this.locals) {
         engine.PyRun_String(script, StartSymbol.File.value, locals.getKPythonProxyBase().obj, globals.getKPythonProxyBase().obj)
+        quickAccess.autoError()
     }
 
     /**
