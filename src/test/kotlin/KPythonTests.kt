@@ -101,8 +101,8 @@ class KPythonTests {
 
         val testModule = env.createModule("testmodule", true)
 
-        testModule.getDict()?.createMethod("testFunc") {
-            return@createMethod "Compare me!"
+        testModule.createFunction("testFunc") {
+            return@createFunction "Compare me!"
         }
 
         env.file("""
