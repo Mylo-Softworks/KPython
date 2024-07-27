@@ -105,13 +105,19 @@ class KPythonTests {
             return@createFunction "Compare me!"
         }
 
+        testModule.createClass("TestClass") {
+            self["name"] = env.convertTo("Test")
+        }
+
         env.file("""
             import testmodule
             
             result = testmodule.testFunc()
+            result_name = testmodule.TestClass().name
         """.trimIndent())
 
         assert(env.globals["result"].toString() == "Compare me!")
+        assert(env.globals["result_name"].toString() == "Test")
     }
 
     @Test
@@ -169,7 +175,7 @@ class KPythonTests {
     fun testParseArguments() {
         val env = PyEnvironment(PythonVersion.python312)
 
-        val functionCallParams = PyEnvironment.FunctionCallParams(null, env.createTuple("first", "second"), env.convertToI<PyDict>(
+        val functionCallParams = PyEnvironment.FunctionCallParams(env.None, env.createTuple("first", "second"), env.convertToI<PyDict>(
             hashMapOf<String, Any?>("name" to "one", "another" to 2)
         ), env)
 

@@ -235,7 +235,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         return convertArgs(*args, prefix = "[", postfix = "]").asInterface<PyList>()
     }
 
-    data class FunctionCallParams(val self: PythonProxyObject?, val args: PyTuple, val kwargs: PyDict, val env: PyEnvironment) {
+    data class FunctionCallParams(val self: PythonProxyObject, val args: PyTuple, val kwargs: PyDict, val env: PyEnvironment) {
         /**
          * Parses python function call arguments by python definition style.
          *
@@ -323,7 +323,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
                     FunctionCallParams(
                         self?.let {
                             env.createProxyObject(it)
-                                  },
+                                  } ?: env.None,
                         args?.let {
                             env.createProxyObject(it).asInterface<PyTuple>()
                         } ?: env.EmptyTuple.asInterface<PyTuple>(),
