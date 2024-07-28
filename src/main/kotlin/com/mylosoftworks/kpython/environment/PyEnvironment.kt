@@ -23,7 +23,10 @@ class PythonException(message: String) : RuntimeException(message)
  */
 class PyEnvironment internal constructor(internal val engine: PythonEngineInterface) {
 
-    // Constants TODO: Find a better way to get these
+    val quickAccess: QuickAccess
+
+    var Builtins: PythonProxyObject
+
     var None: PythonProxyObject
     var True: PythonProxyObject
     var False: PythonProxyObject
@@ -33,13 +36,13 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
     var Ellipsis: PythonProxyObject
     var Type: PythonProxyObject
 
-    // Types TODO: Find a better way to get these
     var Str: PythonProxyObject
     var Int: PythonProxyObject
     var Float: PythonProxyObject
     var List: PythonProxyObject
     var Dict: PythonProxyObject
     var Tuple: PythonProxyObject
+    var Object: PythonProxyObject
 
     var globals: PyDict
     var locals: PyDict
@@ -47,24 +50,46 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
     init {
         engine.Py_Initialize()
 
+        quickAccess = QuickAccess()
+
         globals = createProxyObject(engine.PyDict_New(), GCBehavior.ONLY_DEC).asInterface<PyDict>()
         locals = createProxyObject(engine.PyDict_New(), GCBehavior.ONLY_DEC).asInterface<PyDict>()
 
-        None = evalGC("None", gcBehavior = GCBehavior.IGNORE)
-        True = eval("True")
-        False = eval("False")
-        EmptyList = eval("[]")
-        EmptyDict = eval("{}")
-        EmptyTuple = eval("()")
-        Ellipsis = eval("...")
-        Type = eval("type")
+        Builtins = import("builtins")
 
-        Str = eval("str")
-        Int = eval("int")
-        Float = eval("float")
-        List = eval("list")
-        Dict = eval("dict")
-        Tuple = eval("tuple")
+        None = evalGC("None", gcBehavior = GCBehavior.IGNORE) // Could still use improvements
+//        True = eval("True")
+//        False = eval("False")
+//        EmptyList = eval("[]")
+//        EmptyDict = eval("{}")
+//        EmptyTuple = eval("()")
+//        Ellipsis = eval("...")
+//        Type = eval("type")
+
+        True = Builtins.invokeMethod("bool", true)
+        False = Builtins.invokeMethod("bool", false)
+        EmptyList = Builtins.invokeMethod("list")
+        EmptyDict = Builtins.invokeMethod("dict")
+        EmptyTuple = Builtins.invokeMethod("tuple")
+        Ellipsis = Builtins["Ellipsis"]
+        Type = Builtins["type"]
+
+
+//        Str = eval("str")
+//        Int = eval("int")
+//        Float = eval("float")
+//        List = eval("list")
+//        Dict = eval("dict")
+//        Tuple = eval("tuple")
+//        Object = eval("object")
+
+        Str = Builtins["str"]
+        Int = Builtins["int"]
+        Float = Builtins["float"]
+        List = Builtins["list"]
+        Dict = Builtins["dict"]
+        Tuple = Builtins["tuple"]
+        Object = Builtins["object"]
     }
 
     constructor(version: PythonVersion, pythonPath: String? = null) : this(PythonEngineInterface.initialize(version, pythonPath))
@@ -145,7 +170,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 
         val values = args.map { getConvertCharValuePair(it) }
         val inputString = values.joinToString("", prefix = prefix, postfix = postfix) { it.first }
-        val inputValues = values.map { it.second }
+        val inputValues = values.map { it.second.let { if (it is KPythonProxy) it.getKPythonProxyBase() else it }.let { if (it is PythonProxyObject) it.obj else it } }
         val result = engine.Py_BuildValue(inputString, *inputValues.toTypedArray())
         return result?.let { createProxyObject(it, GCBehavior.ONLY_DEC) } ?: quickAccess.throwAutoError()
     }
@@ -353,7 +378,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 //            else METH_VARARGS or METH_KEYWORDS or METH_CLASS
 
         val functionStruct = PythonEngineInterface.PyMethodDef.ByReference(name, callback, method_flags, doc)
-        val func = engine.PyCFunction_New(functionStruct, self?.obj ?: Str.asInterface<PyType>().invoke()!!.obj)
+        val func = engine.PyCFunction_New(functionStruct, self?.obj ?: Object.invoke().obj)
             ?.let { createProxyObject(it, GCBehavior.ONLY_DEC).asInterface<PyCallable>() } ?: quickAccess.throwAutoError()
 
         return func
@@ -506,7 +531,6 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         engine.PySys_SetObject(name, converted.obj)
     }
 
-    val quickAccess: QuickAccess = QuickAccess()
     // Mid-level bindings for fast access to functions, dictionaries, lists, and tuples
     inner class QuickAccess {
         // Functions
