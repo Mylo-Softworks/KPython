@@ -5,9 +5,9 @@ import com.mylosoftworks.kpython.proxy.KPythonProxy
 import com.mylosoftworks.kpython.proxy.PythonProxyObject
 
 /**
- * Represents a python class of the provided type
+ * Represents a python class type of the provided type
  */
-interface PyClass : PyCallable {
+interface PyType : PyCallable {
     var __name__: String
 
     @DontUsePython
@@ -20,6 +20,6 @@ interface PyClass : PyCallable {
     }
 }
 
-inline fun <reified T: KPythonProxy> PyClass.createTyped(vararg args: Any?): T? {
+inline fun <reified T: KPythonProxy> PyType.createTyped(vararg args: Any?): T? {
     return this(*args)?.asInterface<T>()
 }

@@ -1,8 +1,7 @@
 package com.mylosoftworks.kpython.proxy
 
-import com.mylosoftworks.kpython.environment.pythonobjects.PyClass
+import com.mylosoftworks.kpython.environment.pythonobjects.PyType
 import com.mylosoftworks.kpython.environment.pythonobjects.PyList
-import com.mylosoftworks.kpython.internal.engine.pythondefs.PyObject
 
 interface KPythonProxy {
     /**
@@ -11,7 +10,7 @@ interface KPythonProxy {
     @GetBaseProxy
     fun getKPythonProxyBase(): PythonProxyObject
 
-    val __class__: PyClass
+    val __class__: PyType
 
     fun __dir__(): PyList
 

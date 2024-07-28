@@ -2,7 +2,6 @@ package com.mylosoftworks.kpython.environment
 
 import com.mylosoftworks.kpython.PythonVersion
 import com.mylosoftworks.kpython.environment.pythonobjects.*
-import com.mylosoftworks.kpython.internal.engine.*
 import com.mylosoftworks.kpython.internal.engine.METH_KEYWORDS
 import com.mylosoftworks.kpython.internal.engine.METH_VARARGS
 import com.mylosoftworks.kpython.internal.engine.Py_EQ
@@ -13,7 +12,6 @@ import com.mylosoftworks.kpython.internal.engine.pythondefs.PyObject
 import com.mylosoftworks.kpython.proxy.GCBehavior
 import com.mylosoftworks.kpython.proxy.KPythonProxy
 import com.mylosoftworks.kpython.proxy.PythonProxyObject
-import com.sun.jna.Library
 import com.sun.jna.Library.Handler
 import java.lang.reflect.Proxy
 import java.nio.file.Paths
@@ -321,8 +319,8 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
             return outMap
         }
 
-        fun pySuper(clazz: PyClass): PyClass {
-            return env.import("builtins").invokeMethod("super", clazz, self).asInterface<PyClass>()
+        fun pySuper(clazz: PyType): PyType {
+            return env.import("builtins").invokeMethod("super", clazz, self).asInterface<PyType>()
         }
     }
 
@@ -355,7 +353,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 //            else METH_VARARGS or METH_KEYWORDS or METH_CLASS
 
         val functionStruct = PythonEngineInterface.PyMethodDef.ByReference(name, callback, method_flags, doc)
-        val func = engine.PyCFunction_New(functionStruct, self?.obj ?: Str.asInterface<PyClass>().invoke()!!.obj)
+        val func = engine.PyCFunction_New(functionStruct, self?.obj ?: Str.asInterface<PyType>().invoke()!!.obj)
             ?.let { createProxyObject(it, GCBehavior.ONLY_DEC).asInterface<PyCallable>() } ?: quickAccess.throwAutoError()
 
         return func
@@ -376,9 +374,9 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         return mod.asInterface<PyModule>()
     }
 
-    fun createClass(name: String, parentClass: PyClass, init: FunctionCallParams.() -> Unit) = createClass(name, parentClass.getKPythonProxyBase(), init)
+    fun createClass(name: String, parentClass: PyType, init: FunctionCallParams.() -> Unit) = createClass(name, parentClass.getKPythonProxyBase(), init)
 
-    fun createClass(name: String, parentClass: PythonProxyObject? = null, init: FunctionCallParams.() -> Unit): PyClass {
+    fun createClass(name: String, parentClass: PythonProxyObject? = null, init: FunctionCallParams.() -> Unit): PyType {
 //        val type = engine.PyType_FromSpec(PythonEngineInterface.PyType_Spec(name, 0, 0, 0,
 //                arrayOf(
 //                    PythonEngineInterface.PyType_Slot(Py_tp_init, PyKotlinFunction(this, init)), // TODO: Get init working
@@ -404,7 +402,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
             """.trimIndent(), globals = tempGlobals)
         }
         val base = tempGlobals[name]
-        val clazz = base.asInterface<PyClass>()
+        val clazz = base.asInterface<PyType>()
         clazz.__name__ = name // Set the name of the class
 //        if (parentClass != null) {
 //            clazz.getDict()["__bases__"] = createTuple(parentClass)

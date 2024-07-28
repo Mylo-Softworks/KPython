@@ -1,7 +1,6 @@
 package com.mylosoftworks.kpython.proxy
 
 import com.mylosoftworks.kpython.environment.PyEnvironment
-import com.mylosoftworks.kpython.environment.pythonobjects.PyClass
 import com.mylosoftworks.kpython.internal.engine.pythondefs.PyObject
 import java.lang.reflect.Proxy
 import kotlin.reflect.KClass
