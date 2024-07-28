@@ -125,13 +125,19 @@ class KPythonTests {
         val env = PyEnvironment(PythonVersion.python312)
 
         val pyClass = env.createClass("A_Class") {
-            self?.createMethod("whoami") {
-                return@createMethod self?.asInterface<KPythonProxy>()?.__class__?.__name__
+
+            self.createMethod("whoami") {
+                return@createMethod self.asInterface<KPythonProxy>().__class__.__name__
             }
         }
 
+        val subClass = env.createClass("Another_Class", pyClass) {
+
+        }
+
         val inst = pyClass()
-        val result = inst?.invokeMethod("whoami")
+        val subInst = subClass()
+        val result = inst.invokeMethod("whoami")
         assert(result.toString() == "A_Class")
     }
 
@@ -149,7 +155,7 @@ class KPythonTests {
 
         val kwargs = hashMapOf<String, Any?>("test1" to "Value!")
 
-        val result = inst?.invokeMethod("test", kwargs = kwargs)
+        val result = inst.invokeMethod("test", kwargs = kwargs)
         val convertedResult = env.convertFrom(result, HashMap::class.java)
 
         assert(convertedResult.toString() == kwargs.toString()) // Using toString since hashmaps don't compare well here, since the content is just strings this won't be a problem

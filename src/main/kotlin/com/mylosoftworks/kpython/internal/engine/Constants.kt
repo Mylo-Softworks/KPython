@@ -26,6 +26,14 @@ internal const val METH_METHOD = 0x0200
 
 internal const val Py_tp_init = 60 // https://github.com/python/cpython/blob/4e7550934941050f54c86338cd5e40cd565ceaf2/Include/typeslots.h#L61
 
+// Comparisons https://github.com/python/cpython/blob/main/Include/object.h#L656
+internal const val Py_LT = 0
+internal const val Py_LE = 1
+internal const val Py_EQ = 2
+internal const val Py_NE = 3
+internal const val Py_GT = 4
+internal const val Py_GE = 5
+
 //internal const val Py_CONSTANT_NONE             = 0
 //internal const val Py_CONSTANT_FALSE            = 1
 //internal const val Py_CONSTANT_TRUE             = 2

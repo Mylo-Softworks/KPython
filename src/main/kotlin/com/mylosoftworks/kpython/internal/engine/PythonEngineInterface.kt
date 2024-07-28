@@ -58,6 +58,8 @@ internal interface PythonEngineInterface : Library {
     fun Py_IsTrue(x: PyObject): Boolean
     fun Py_IsFalse(x: PyObject): Boolean
     fun PyObject_IsInstance(inst: PyObject, cls: PyObject): Boolean
+    fun PyObject_RichCompare(x: PyObject, y: PyObject, opid: Int): PyObject
+    fun PyObject_RichCompareBool(x: PyObject, y: PyObject, opid: Int): Int // -1 on error, 0 false, 1 true
 
     // PyRun_
     fun PyRun_SimpleString(code: String): Int

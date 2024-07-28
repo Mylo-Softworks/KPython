@@ -93,8 +93,11 @@ open class PythonProxyObject internal constructor(val env: PyEnvironment, val ob
     }
 
     override fun equals(other: Any?): Boolean {
-        if (other is PythonProxyObject) {
-            return obj == other.obj
+        val otherMappedIfPossible = if (other is KPythonProxy) other.getKPythonProxyBase() else other
+        if (otherMappedIfPossible is PythonProxyObject) {
+            if (obj == otherMappedIfPossible.obj) return true
+            // Now use python to check
+            return env.quickAccess.areEqual(this, otherMappedIfPossible)
         }
         return obj == other
     }

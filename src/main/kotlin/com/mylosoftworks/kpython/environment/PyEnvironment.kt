@@ -2,8 +2,10 @@ package com.mylosoftworks.kpython.environment
 
 import com.mylosoftworks.kpython.PythonVersion
 import com.mylosoftworks.kpython.environment.pythonobjects.*
+import com.mylosoftworks.kpython.internal.engine.*
 import com.mylosoftworks.kpython.internal.engine.METH_KEYWORDS
 import com.mylosoftworks.kpython.internal.engine.METH_VARARGS
+import com.mylosoftworks.kpython.internal.engine.Py_EQ
 import com.mylosoftworks.kpython.internal.engine.PythonEngineInterface
 import com.mylosoftworks.kpython.internal.engine.StartSymbol
 import com.mylosoftworks.kpython.internal.engine.initialize
@@ -11,6 +13,9 @@ import com.mylosoftworks.kpython.internal.engine.pythondefs.PyObject
 import com.mylosoftworks.kpython.proxy.GCBehavior
 import com.mylosoftworks.kpython.proxy.KPythonProxy
 import com.mylosoftworks.kpython.proxy.PythonProxyObject
+import com.sun.jna.Library
+import com.sun.jna.Library.Handler
+import java.lang.reflect.Proxy
 import java.nio.file.Paths
 
 class PythonException(message: String) : RuntimeException(message)
@@ -69,6 +74,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 
     fun finalize() {
         engine.Py_Finalize()
+        (Proxy.getInvocationHandler(engine) as Handler).nativeLibrary.close()
     }
 
     /**
@@ -80,7 +86,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
      * For isolated expressions, with return value
      */
     fun eval(script: String, globals: PyDict = this.globals, locals: PyDict = this.locals): PythonProxyObject {
-        return engine.PyRun_String(script, StartSymbol.Eval.value, locals.getKPythonProxyBase().obj, globals.getKPythonProxyBase().obj)?.asProxyObject() ?: quickAccess.throwAutoError()
+        return engine.PyRun_String(script, StartSymbol.Eval.value, locals.getKPythonProxyBase().obj, globals.getKPythonProxyBase().obj)?.asProxyObject(GCBehavior.ONLY_DEC) ?: quickAccess.throwAutoError()
     }
 
     internal fun evalGC(script: String, globals: PyDict = this.globals, locals: PyDict = this.locals, gcBehavior: GCBehavior = GCBehavior.FULL): PythonProxyObject {
@@ -105,7 +111,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
      * For running code line by line as if it were ran in an interactive terminal
      */
     fun single(script: String, globals: PyDict = this.globals, locals: PyDict = this.locals): PythonProxyObject {
-        return engine.PyRun_String(script, StartSymbol.Single.value, locals.getKPythonProxyBase().obj, globals.getKPythonProxyBase().obj)?.asProxyObject() ?: quickAccess.throwAutoError()
+        return engine.PyRun_String(script, StartSymbol.Single.value, locals.getKPythonProxyBase().obj, globals.getKPythonProxyBase().obj)?.asProxyObject(GCBehavior.ONLY_DEC) ?: quickAccess.throwAutoError()
     }
 
 //    inline fun <reified T> convertFrom(input: PythonProxyObject): T {
@@ -205,7 +211,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 //            engine.PyList_GetItem(pyObject, it)?.asProxyObject() ?: None
 //        }
         return Array(engine.PyList_Size(pyObject).toInt()) {
-            convertFrom(engine.PyList_GetItem(pyObject, it.toLong())?.asProxyObject() ?: None, itemType)
+            convertFrom(engine.PyList_GetItem(pyObject, it.toLong())?.asProxyObject(GCBehavior.FULL) ?: None, itemType)
         }
     }
 
@@ -213,7 +219,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         return hashMapOf(*readArray(engine.PyDict_Keys(pyObject), keyType).zip(readArray(engine.PyDict_Values(pyObject), valueType)).toTypedArray())
     }
 
-    private fun PyObject.asProxyObject(): PythonProxyObject = createProxyObject(this)
+    private fun PyObject.asProxyObject(gcBehavior: GCBehavior): PythonProxyObject = createProxyObject(this, gcBehavior)
 
     fun createProxyObject(rawValue: PyObject): PythonProxyObject {
         return createProxyObject(rawValue, GCBehavior.FULL)
@@ -314,6 +320,10 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 
             return outMap
         }
+
+        fun pySuper(clazz: PyClass): PyClass {
+            return env.import("builtins").invokeMethod("super", clazz, self).asInterface<PyClass>()
+        }
     }
 
 
@@ -366,7 +376,9 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         return mod.asInterface<PyModule>()
     }
 
-    fun createClass(name: String, init: FunctionCallParams.() -> Unit): PyClass {
+    fun createClass(name: String, parentClass: PyClass, init: FunctionCallParams.() -> Unit) = createClass(name, parentClass.getKPythonProxyBase(), init)
+
+    fun createClass(name: String, parentClass: PythonProxyObject? = null, init: FunctionCallParams.() -> Unit): PyClass {
 //        val type = engine.PyType_FromSpec(PythonEngineInterface.PyType_Spec(name, 0, 0, 0,
 //                arrayOf(
 //                    PythonEngineInterface.PyType_Slot(Py_tp_init, PyKotlinFunction(this, init)), // TODO: Get init working
@@ -378,31 +390,48 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         // WARNING: This is very hacky, and should be improved upon.
 
         val tempGlobals = createDict()
-        single("""
-            class $name:
-              pass
-        """.trimIndent(), globals = tempGlobals)
-        val base = tempGlobals[name]!!
+        if (parentClass == null) {
+            single("""
+                class $name:
+                  pass
+            """.trimIndent(), globals = tempGlobals)
+        }
+        else {
+            tempGlobals["__PARENT_CLASS__"] = parentClass
+            single("""
+                class $name(__PARENT_CLASS__):
+                  pass
+            """.trimIndent(), globals = tempGlobals)
+        }
+        val base = tempGlobals[name]
         val clazz = base.asInterface<PyClass>()
         clazz.__name__ = name // Set the name of the class
+//        if (parentClass != null) {
+//            clazz.getDict()["__bases__"] = createTuple(parentClass)
+//        }
+
 //        clazz.getKPythonProxyBase()["__new__"] = createFunction(function = init).getKPythonProxyBase()
 //        val oldNew = clazz.getKPythonProxyBase()["__new__"]
 
         val newNew: FunctionCallParams.() -> Any? = newNew@{
 //            val inst = import("builtins").invokeMethod("super", self!!["__class__"], self)?.invokeMethod("__new__", self)
 //            val inst = import("builtins").invokeMethod("object", clazz)
-            val inst = import("builtins")["object"].invokeMethod("__new__", clazz)
+            val inst =
+                parentClass?.invokeMethod("__new__", clazz) // If parent class exists, invoke it's __new__
+                    ?: import("builtins")["object"].invokeMethod("__new__", clazz) // Otherwise, invoke object's __new__
 
             val newArgs = mutableListOf<PythonProxyObject>()
             val iter = args.iterator()
-            iter.next() // Skip first item (Would be class)
+            val calledClass = iter.next() // Skip (And store) first item (Would be class)
             for (item in iter) {
                 newArgs.add(item)
             }
 
             val initFunc = createFunction(inst, "__init__", function = init).getKPythonProxyBase() // Set __init__ to the init supplied in function call
             inst["__init__"] = initFunc // Rewrite __init__ on the object
-            engine.PyObject_Call(initFunc.obj, convertTo(newArgs.toTypedArray()).obj, kwargs.getKPythonProxyBase().obj) // Call __init__
+            if (calledClass == clazz) { // Ensures that the instantiated class is this class, and not a subclass
+                engine.PyObject_Call(initFunc.obj, convertTo(newArgs.toTypedArray()).obj, kwargs.getKPythonProxyBase().obj) // Call __init__
+            }
 
             return@newNew inst
         }
@@ -490,6 +519,10 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 //            return engine.PyObject_CallObject(o.obj, args2?.obj)?.let { createProxyObject(it) }
         }
 
+        fun invokeRaw(o: PythonProxyObject, args: PyTuple = EmptyTuple.asInterface(), kwargs: PyDict? = null): PythonProxyObject {
+            return engine.PyObject_Call(o.obj, args.getKPythonProxyBase().obj, kwargs?.getKPythonProxyBase()?.obj)?.asProxyObject(GCBehavior.ONLY_DEC) ?: throwAutoError()
+        }
+
         // Dicts
         fun dictGetSize(o: PythonProxyObject): Long {
             return engine.PyDict_Size(o.obj)
@@ -553,6 +586,16 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 //            return engine.PyType_GetDict(o.obj)?.let {
 //                createProxyObject(it, GCBehavior.ONLY_DEC) // Borrowed, but given to kotlin
 //            }
+        }
+
+        // object
+        fun areEqual(a: PythonProxyObject, b: PythonProxyObject): Boolean {
+            return when (engine.PyObject_RichCompareBool(a.obj, b.obj, Py_EQ)) {
+                -1 -> throwAutoError()
+                0 -> false
+                1 -> true
+                else -> throwAutoError()
+            }
         }
 
         fun errorOccurred(): PythonProxyObject? {

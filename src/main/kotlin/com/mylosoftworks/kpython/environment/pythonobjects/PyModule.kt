@@ -16,10 +16,10 @@ interface PyModule : KPythonProxy {
     fun createFunctionUnit(name: String, docs: String = "", code: PyEnvironment.FunctionCallParams.() -> Unit)
 
     @DontUsePython
-    fun invokeMethod(key: String, vararg args: Any, kwargs: HashMap<String, Any?>? = null): PythonProxyObject
+    fun invokeFunction(key: String, vararg args: Any, kwargs: HashMap<String, Any?>? = null): PythonProxyObject
 
     @DontUsePython
-    fun createClass(name: String, init: PyEnvironment.FunctionCallParams.() -> Unit)
+    fun createClass(name: String, parentClass: PythonProxyObject? = null, init: PyEnvironment.FunctionCallParams.() -> Unit)
 
     companion object {
         fun getDict(self: PythonProxyObject): PythonProxyObject {
@@ -34,12 +34,12 @@ interface PyModule : KPythonProxy {
             self.env.quickAccess.moduleGetDict(self).asInterface<PyDict>()[name] = self.env.createFunctionUnit(self, name, docs, code)
         }
 
-        fun invokeMethod(self: PythonProxyObject, key: String, vararg args: Any, kwargs: HashMap<String, Any?>? = null): PythonProxyObject {
+        fun invokeFunction(self: PythonProxyObject, key: String, vararg args: Any, kwargs: HashMap<String, Any?>? = null): PythonProxyObject {
             return self.env.quickAccess.moduleGetDict(self).asInterface<PyDict>().invokeMethod(key, *args, kwargs = kwargs)
         }
 
-        fun createClass(self: PythonProxyObject, name: String, init: PyEnvironment.FunctionCallParams.() -> Unit) {
-            val pyClass = self.env.createClass(name, init)
+        fun createClass(self: PythonProxyObject, name: String, parentClass: PythonProxyObject? = null, init: PyEnvironment.FunctionCallParams.() -> Unit) {
+            val pyClass = self.env.createClass(name, parentClass, init)
             self.env.quickAccess.moduleGetDict(self).asInterface<PyDict>()[name] = pyClass
         }
     }
