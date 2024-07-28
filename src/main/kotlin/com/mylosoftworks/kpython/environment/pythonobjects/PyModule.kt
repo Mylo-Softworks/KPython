@@ -21,26 +21,33 @@ interface PyModule : KPythonProxy {
     @DontUsePython
     fun createClass(name: String, parentClass: PythonProxyObject? = null, init: PyEnvironment.FunctionCallParams.() -> Unit)
 
+    @DontUsePython
+    fun addSubModule(name: String, subModule: PyModule)
+
     companion object {
-        fun getDict(self: PythonProxyObject): PythonProxyObject {
+        fun getDict(self: PythonProxyObject): PyDict {
             return self.env.quickAccess.moduleGetDict(self)
         }
 
         fun createFunction(self: PythonProxyObject, name: String, docs: String = "", code: PyEnvironment.FunctionCallParams.() -> Any?) {
-            self.env.quickAccess.moduleGetDict(self).asInterface<PyDict>()[name] = self.env.createFunction(self, name, docs, code)
+            self.env.quickAccess.moduleGetDict(self)[name] = self.env.createFunction(self, name, docs, code)
         }
 
         fun createFunctionUnit(self: PythonProxyObject, name: String, docs: String = "", code: PyEnvironment.FunctionCallParams.() -> Unit) {
-            self.env.quickAccess.moduleGetDict(self).asInterface<PyDict>()[name] = self.env.createFunctionUnit(self, name, docs, code)
+            self.env.quickAccess.moduleGetDict(self)[name] = self.env.createFunctionUnit(self, name, docs, code)
         }
 
         fun invokeFunction(self: PythonProxyObject, key: String, vararg args: Any, kwargs: HashMap<String, Any?>? = null): PythonProxyObject {
-            return self.env.quickAccess.moduleGetDict(self).asInterface<PyDict>().invokeMethod(key, *args, kwargs = kwargs)
+            return self.env.quickAccess.moduleGetDict(self).invokeMethod(key, *args, kwargs = kwargs)
         }
 
         fun createClass(self: PythonProxyObject, name: String, parentClass: PythonProxyObject? = null, init: PyEnvironment.FunctionCallParams.() -> Unit) {
             val pyClass = self.env.createClass(name, parentClass, init)
-            self.env.quickAccess.moduleGetDict(self).asInterface<PyDict>()[name] = pyClass
+            self.env.quickAccess.moduleGetDict(self)[name] = pyClass
+        }
+
+        fun addSubModule(self: PythonProxyObject, name: String, subModule: PyModule) {
+            self.env.quickAccess.moduleGetDict(self)[name]
         }
     }
 }

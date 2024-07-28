@@ -573,10 +573,14 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         }
 
         // module
-        fun moduleGetDict(o: PythonProxyObject): PythonProxyObject {
+        fun moduleGetDictGeneric(o: PythonProxyObject): PythonProxyObject {
             return engine.PyModule_GetDict(o.obj)?.let {
                 createProxyObject(it, GCBehavior.FULL) // Borrowed, but given to kotlin
             } ?: None
+        }
+
+        fun moduleGetDict(o: PythonProxyObject): PyDict {
+            return moduleGetDictGeneric(o).asInterface()
         }
 
         fun typeGetDict(o: PythonProxyObject): PythonProxyObject {
