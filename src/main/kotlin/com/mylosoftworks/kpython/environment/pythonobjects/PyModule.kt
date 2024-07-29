@@ -21,6 +21,15 @@ interface PyModule : KPythonProxy {
     @DontUsePython
     fun createClass(name: String, parentClass: PythonProxyObject? = null, init: PyEnvironment.FunctionCallParams.() -> Unit)
 
+    /**
+     * Example: with a module named "module" and a submodule named "module.submodule"
+     *
+     * ```kt
+     * val module = env.createModule("module")
+     * val submodule = env.createModule("module.submodule") // Indicates that it's a submodule of module
+     * module.addSubModule("submodule", submodule) // submodule was registered as "module.submodule", and relative to "module", it's just "submodule"
+     * ```
+     */
     @DontUsePython
     fun addSubModule(name: String, subModule: PyModule)
 
@@ -47,7 +56,7 @@ interface PyModule : KPythonProxy {
         }
 
         fun addSubModule(self: PythonProxyObject, name: String, subModule: PyModule) {
-            self.env.quickAccess.moduleGetDict(self)[name]
+            self.env.quickAccess.moduleGetDict(self)[name] = subModule
         }
     }
 }
