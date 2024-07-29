@@ -22,12 +22,17 @@ internal interface PythonEngineInterface : Library {
     }
 
     @Structure.FieldOrder("slot", "pfunc")
-    open class PyType_Slot(
+    class PyType_Slot(
         @JvmField var slot: Int,
         @JvmField var pfunc: PyCFunctionWithKwargs?
-    ): Structure(), Structure.ByReference {
+    ): Structure(), Structure.ByValue {
         constructor() : this(0, null)
     }
+
+    @Structure.FieldOrder("value")
+    class PyType_SlotArray(
+        @JvmField var value: Array<PyType_Slot>
+    ): Structure(), Structure.ByReference {}
 
     @Structure.FieldOrder("name", "basicSize", "itemSize", "flags", "slots")
     open class PyType_Spec(
@@ -35,7 +40,7 @@ internal interface PythonEngineInterface : Library {
         @JvmField var basicSize: Int,
         @JvmField var itemSize: Int,
         @JvmField var flags: Int, // Uint
-        @JvmField var slots: Array<PyType_Slot>, // Array of PyType_Slot structures. Terminated by the special slot value {0, NULL}.
+        @JvmField var slots: PyType_SlotArray, // Array of PyType_Slot structures. Terminated by the special slot value {0, NULL}.
 //        @JvmField var slots: PyType_Slot, // Array of PyType_Slot structures. Terminated by the special slot value {0, NULL}.
     ): Structure(), Structure.ByReference
 

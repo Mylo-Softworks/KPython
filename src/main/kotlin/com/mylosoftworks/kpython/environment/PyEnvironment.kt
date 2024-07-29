@@ -344,9 +344,9 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
             return outMap
         }
 
-        fun pySuper(clazz: PyType): PyType {
-            return env.import("builtins").invokeMethod("super", clazz, self).asInterface<PyType>()
-        }
+//        fun pySuper(): PythonProxyObject {
+//            return env.Builtins.invokeMethod("super", self["__class__"]["__bases__"].asInterface<PyTuple>()[0], self)
+//        }
     }
 
 
@@ -429,19 +429,20 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         val base = tempGlobals[name]
         val clazz = base.asInterface<PyType>()
         clazz.__name__ = name // Set the name of the class
-//        if (parentClass != null) {
-//            clazz.getDict()["__bases__"] = createTuple(parentClass)
-//        }
 
 //        clazz.getKPythonProxyBase()["__new__"] = createFunction(function = init).getKPythonProxyBase()
 //        val oldNew = clazz.getKPythonProxyBase()["__new__"]
 
         val newNew: FunctionCallParams.() -> Any? = newNew@{
-//            val inst = import("builtins").invokeMethod("super", self!!["__class__"], self)?.invokeMethod("__new__", self)
-//            val inst = import("builtins").invokeMethod("object", clazz)
+//            val inst = Builtins.invokeMethod("super", self!!["__class__"], self)?.invokeMethod("__new__", self)
+//            val inst = Builtins.invokeMethod("object", clazz)
+            val givenClass = args[0] // The class provided on the __new__ call
             val inst =
-                parentClass?.invokeMethod("__new__", clazz) // If parent class exists, invoke it's __new__
-                    ?: import("builtins")["object"].invokeMethod("__new__", clazz) // Otherwise, invoke object's __new__
+//                Builtins["object"].invokeMethod("__new__", clazz)
+                parentClass?.invokeMethod("__new__", givenClass) // If parent class exists, invoke it's __new__
+                    ?: Builtins["object"].invokeMethod("__new__", givenClass) // Otherwise, invoke object's __new__
+
+
 
             val newArgs = mutableListOf<PythonProxyObject>()
             val iter = args.iterator()

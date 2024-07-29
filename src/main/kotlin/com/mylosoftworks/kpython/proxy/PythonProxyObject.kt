@@ -69,7 +69,7 @@ open class PythonProxyObject internal constructor(val env: PyEnvironment, val ob
         return env.quickAccess.invoke(method, *params, kwargs = kwargs)
     }
 
-    fun invoke(vararg params: Any?, kwargs: HashMap<String, Any?>? = null): PythonProxyObject {
+    operator fun invoke(vararg params: Any?, kwargs: HashMap<String, Any?>? = null): PythonProxyObject {
         return env.quickAccess.invoke(this, *params, kwargs = kwargs)
     }
 
