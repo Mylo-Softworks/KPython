@@ -115,11 +115,11 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
      * For isolated expressions, with return value
      */
     fun eval(script: String, globals: PyDict = this.globals, locals: PyDict = this.locals): PythonProxyObject {
-        return engine.PyRun_String(script, StartSymbol.Eval.value, locals.getKPythonProxyBase().obj, globals.getKPythonProxyBase().obj)?.asProxyObject(GCBehavior.ONLY_DEC) ?: quickAccess.throwAutoError()
+        return engine.PyRun_String(script, StartSymbol.Eval.value, globals.getKPythonProxyBase().obj, locals.getKPythonProxyBase().obj)?.asProxyObject(GCBehavior.ONLY_DEC) ?: quickAccess.throwAutoError()
     }
 
     internal fun evalGC(script: String, globals: PyDict = this.globals, locals: PyDict = this.locals, gcBehavior: GCBehavior = GCBehavior.FULL): PythonProxyObject {
-        return engine.PyRun_String(script, StartSymbol.Eval.value, locals.getKPythonProxyBase().obj, globals.getKPythonProxyBase().obj)
+        return engine.PyRun_String(script, StartSymbol.Eval.value, globals.getKPythonProxyBase().obj, locals.getKPythonProxyBase().obj)
             ?.let { createProxyObject(it, gcBehavior) } ?: quickAccess.throwAutoError()
     }
 
@@ -127,7 +127,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
      * For running code as if it were being ran from a file
      */
     fun file(script: String, globals: PyDict = this.globals, locals: PyDict = this.locals) {
-        engine.PyRun_String(script, StartSymbol.File.value, locals.getKPythonProxyBase().obj, globals.getKPythonProxyBase().obj)
+        engine.PyRun_String(script, StartSymbol.File.value, globals.getKPythonProxyBase().obj, locals.getKPythonProxyBase().obj)
         quickAccess.autoError()
     }
 
@@ -140,7 +140,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
      * For running code line by line as if it were ran in an interactive terminal
      */
     fun single(script: String, globals: PyDict = this.globals, locals: PyDict = this.locals): PythonProxyObject {
-        return engine.PyRun_String(script, StartSymbol.Single.value, locals.getKPythonProxyBase().obj, globals.getKPythonProxyBase().obj)?.asProxyObject(GCBehavior.ONLY_DEC) ?: quickAccess.throwAutoError()
+        return engine.PyRun_String(script, StartSymbol.Single.value, globals.getKPythonProxyBase().obj, locals.getKPythonProxyBase().obj)?.asProxyObject(GCBehavior.ONLY_DEC) ?: quickAccess.throwAutoError()
     }
 
 //    inline fun <reified T> convertFrom(input: PythonProxyObject): T {
@@ -418,21 +418,21 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 
         // WARNING: This is very hacky, and should be improved upon.
 
-        val tempGlobals = createDict()
+        val tempLocals = createDict()
         if (parentClass == null) {
             single("""
                 class $name:
                   pass
-            """.trimIndent(), globals = tempGlobals)
+            """.trimIndent(), locals = tempLocals)
         }
         else {
-            tempGlobals["__PARENT_CLASS__"] = parentClass
+            tempLocals["__PARENT_CLASS__"] = parentClass
             single("""
                 class $name(__PARENT_CLASS__):
                   pass
-            """.trimIndent(), globals = tempGlobals)
+            """.trimIndent(), locals = tempLocals)
         }
-        val base = tempGlobals[name]
+        val base = tempLocals[name]
         val clazz = base.asInterface<PyType>()
         clazz.__name__ = name // Set the name of the class
 

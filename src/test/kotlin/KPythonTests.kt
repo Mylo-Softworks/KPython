@@ -36,7 +36,7 @@ class KPythonTests {
                     return "This is an example object with return!"
         """.trimIndent())
 
-        val pyClass = env.globals["Test"].asInterface<PyType>()
+        val pyClass = env.locals["Test"].asInterface<PyType>()
 //        val inst = pyClass()!!.asInterface<PyCallable>()
         val inst = pyClass.createTyped<PyCallable>()!!
         val result = inst()
@@ -87,7 +87,7 @@ class KPythonTests {
                     pass
         """.trimIndent())
 
-        val A = env.globals["A"].asInterface<PyType>()
+        val A = env.locals["A"].asInterface<PyType>()
         val inst = A()!!.asInterface<PyEnterable>()
 
         inst.with {
@@ -116,8 +116,8 @@ class KPythonTests {
             result_name = testmodule.TestClass().name
         """.trimIndent())
 
-        assert(env.globals["result"].toString() == "Compare me!")
-        assert(env.globals["result_name"].toString() == "Test")
+        assert(env.locals["result"].toString() == "Compare me!")
+        assert(env.locals["result_name"].toString() == "Test")
     }
 
     @Test
@@ -150,7 +150,7 @@ class KPythonTests {
                 def test(self, **kwargs):
                     return kwargs
         """.trimIndent())
-        val pyClass = env.globals["A"].asInterface<PyType>()
+        val pyClass = env.locals["A"].asInterface<PyType>()
         val inst = pyClass()
 
         val kwargs = hashMapOf<String, Any?>("test1" to "Value!")
