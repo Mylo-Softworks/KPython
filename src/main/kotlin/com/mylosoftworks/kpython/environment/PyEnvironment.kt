@@ -16,6 +16,7 @@ import com.sun.jna.Library.Handler
 import com.sun.jna.WString
 import java.lang.reflect.Proxy
 import java.nio.file.Paths
+import kotlin.io.path.Path
 
 class PythonException(message: String) : RuntimeException(message)
 
@@ -504,6 +505,17 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         val d = engine.PyUnicode_DecodeFSDefault(dir) // Created
         engine.PyList_Insert(path, 0, d)
         engine.Py_DecRef(d)
+    }
+
+    /**
+     * Easier way to activate a venv, actually just runs:
+     *
+     * ```kt
+     * addToPath(Path(dir, "Lib", "site-packages").toString())
+     * ```
+     */
+    fun activateVenv(dir: String) {
+        addToPath(Path(dir, "Lib", "site-packages").toString())
     }
 
     fun setArgv(fileName: String = "fake_file.py", vararg args: String) {
