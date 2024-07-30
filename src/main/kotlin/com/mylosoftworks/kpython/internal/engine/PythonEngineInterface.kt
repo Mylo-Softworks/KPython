@@ -5,6 +5,9 @@ import com.mylosoftworks.kpython.internal.engine.pythondefs.PyObject
 import com.mylosoftworks.kpython.internal.engine.pythondefs.PyTypeObject
 import com.mylosoftworks.kpython.internal.engine.pythondefs.Py_ssize_t
 import com.sun.jna.*
+import com.sun.jna.ptr.PointerByReference
+
+
 
 internal interface PythonEngineInterface : Library {
     // https://docs.python.org/3/c-api/structures.html#c.PyMethodDef
@@ -56,6 +59,10 @@ internal interface PythonEngineInterface : Library {
     fun Py_GetCopyright(): String
     fun Py_GetCompiler(): String
     fun Py_GetBuildInfo(): String
+
+    // Environments
+    fun Py_SetPythonHome(home: WString) // https://docs.python.org/3/c-api/init.html#c.Py_SetPythonHome
+    fun Py_GetPythonHome(): WString
 
     // comparisons
     fun Py_Is(x: PyObject, y: PyObject): Boolean

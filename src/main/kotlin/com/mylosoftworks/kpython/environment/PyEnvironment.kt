@@ -13,6 +13,7 @@ import com.mylosoftworks.kpython.proxy.GCBehavior
 import com.mylosoftworks.kpython.proxy.KPythonProxy
 import com.mylosoftworks.kpython.proxy.PythonProxyObject
 import com.sun.jna.Library.Handler
+import com.sun.jna.WString
 import java.lang.reflect.Proxy
 import java.nio.file.Paths
 
@@ -21,7 +22,7 @@ class PythonException(message: String) : RuntimeException(message)
 /**
  * Represents a python environment, only one can exist at a time per process currently.
  */
-class PyEnvironment internal constructor(internal val engine: PythonEngineInterface) {
+class PyEnvironment internal constructor(internal val engine: PythonEngineInterface, env: String?) {
 
     val quickAccess: QuickAccess
 
@@ -48,6 +49,10 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
     var locals: PyDict
 
     init {
+        if (env != null) {
+            engine.Py_SetPythonHome(WString(env))
+        }
+
         engine.Py_Initialize()
 
         quickAccess = QuickAccess()
@@ -92,8 +97,8 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
         Object = Builtins["object"]
     }
 
-    constructor(version: PythonVersion, pythonPath: String? = null) : this(PythonEngineInterface.initialize(version, pythonPath))
-    constructor(version: String, pythonPath: String? = null) : this(PythonEngineInterface.initialize(version, pythonPath))
+    constructor(version: PythonVersion, pythonPath: String? = null, pyHome: String? = null) : this(PythonEngineInterface.initialize(version, pythonPath), pyHome)
+    constructor(version: String, pythonPath: String? = null, pyHome: String? = null) : this(PythonEngineInterface.initialize(version, pythonPath), pyHome)
 
     fun finalize() {
         engine.Py_Finalize()
@@ -553,6 +558,10 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 
         fun getBuildInfo(): String {
             return engine.Py_GetBuildInfo()
+        }
+
+        fun getHome(): String {
+            return engine.Py_GetPythonHome().toString()
         }
 
         // Functions
