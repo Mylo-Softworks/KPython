@@ -22,7 +22,7 @@ class PythonException(message: String) : RuntimeException(message)
 /**
  * Represents a python environment, only one can exist at a time per process currently.
  */
-class PyEnvironment internal constructor(internal val engine: PythonEngineInterface, env: String?) {
+class PyEnvironment internal constructor(internal val engine: PythonEngineInterface, pyHome: String?) {
 
     val quickAccess: QuickAccess
 
@@ -49,8 +49,8 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
     var locals: PyDict
 
     init {
-        if (env != null) {
-            engine.Py_SetPythonHome(WString(env))
+        if (pyHome != null) {
+            engine.Py_SetPythonHome(WString(pyHome))
         }
 
         engine.Py_Initialize()
@@ -493,13 +493,17 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 
     fun setFakeFileDir(dir: String, fileName: String = "fake_file.py", globals: PyDict? = null) {
         // Set path
-        val path = engine.PySys_GetObject("path")!! // Borrowed
-        val d = engine.PyUnicode_DecodeFSDefault(dir)
-        engine.PyList_Insert(path, 0, d)
-        engine.Py_DecRef(d)
+        addToPath(dir)
 
         // Set __file__
         (globals ?: this.globals)["__file__"] = convertTo(Paths.get(dir, fileName))
+    }
+
+    fun addToPath(dir: String) {
+        val path = engine.PySys_GetObject("path")!! // Borrowed
+        val d = engine.PyUnicode_DecodeFSDefault(dir) // Created
+        engine.PyList_Insert(path, 0, d)
+        engine.Py_DecRef(d)
     }
 
     fun setArgv(fileName: String = "fake_file.py", vararg args: String) {
