@@ -534,6 +534,27 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 
     // Mid-level bindings for fast access to functions, dictionaries, lists, and tuples
     inner class QuickAccess {
+        // Python information
+        fun getBuild(): String {
+            return engine.Py_GetBuildInfo()
+        }
+
+        fun getCopyright(): String {
+            return engine.Py_GetCopyright()
+        }
+
+        fun getVersion(): String {
+            return engine.Py_GetVersion()
+        }
+
+        fun getPlatform(): String {
+            return engine.Py_GetPlatform()
+        }
+
+        fun getBuildInfo(): String {
+            return engine.Py_GetBuildInfo()
+        }
+
         // Functions
         fun invoke(o: PythonProxyObject, vararg args: Any?, kwargs: HashMap<String, Any?>? = null): PythonProxyObject {
             val usedArgs = convertArgs(*args) // Not allowed to be empty
