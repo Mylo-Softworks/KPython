@@ -671,8 +671,21 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
             }
         }
 
-        fun errorOccurred(): PythonProxyObject? {
-            return engine.PyErr_GetRaisedException()?.let { createProxyObject(it, GCBehavior.FULL) }
+        fun errorOccurred(): String? {
+            val pType = PythonEngineInterface.DoublePointer(null)
+            val pValue = PythonEngineInterface.DoublePointer(null)
+            val pTraceback = PythonEngineInterface.DoublePointer(null)
+
+            engine.PyErr_Fetch(pType, pValue, pTraceback) // Stores values, or nullpointers if not
+
+            return pValue.pointer?.let { createProxyObject(it, GCBehavior.ONLY_DEC) }
+                ?.let { import("traceback").invokeMethod("format_exception", it) }?.asInterface<PyList>()?.let {
+                    val jvmList = ArrayList<String>()
+                    it.iterator().forEach {
+                        jvmList.add(it.toString().replace("\\n", "\n"))
+                    }
+                    jvmList.joinToString("", prefix = "\n")
+                }
         }
 
         fun autoError() {

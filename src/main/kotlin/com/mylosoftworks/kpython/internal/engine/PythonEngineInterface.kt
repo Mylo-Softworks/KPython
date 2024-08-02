@@ -24,6 +24,9 @@ internal interface PythonEngineInterface : Library {
         fun invoke(self: PyObject?, args: PyObject?, kwargs: PyObject?): PyObject?
     }
 
+    @Structure.FieldOrder("pointer")
+    class DoublePointer(@JvmField var pointer: Pointer?): Structure(), Structure.ByReference
+
     @Structure.FieldOrder("slot", "pfunc")
     class PyType_Slot(
         @JvmField var slot: Int,
@@ -182,6 +185,7 @@ internal interface PythonEngineInterface : Library {
 
     // Errors
     fun PyErr_GetRaisedException(): PyObject?
+    fun PyErr_Fetch(pType: DoublePointer, pValue: DoublePointer, pTraceback: DoublePointer)
 
     companion object // Uses extension methods just in case
 }
