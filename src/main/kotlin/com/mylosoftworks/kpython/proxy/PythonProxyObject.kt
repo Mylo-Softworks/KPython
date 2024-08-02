@@ -91,6 +91,15 @@ open class PythonProxyObject internal constructor(val env: PyEnvironment, val ob
         return this.env.convertFrom(this, type)
     }
 
+    fun toJvmByteArray(): ByteArray {
+        return this.env.quickAccess.readByteArray(this)
+    }
+
+    @OptIn(ExperimentalUnsignedTypes::class)
+    fun toJvmUByteArray(): UByteArray {
+        return toJvmByteArray().toUByteArray()
+    }
+
     override fun equals(other: Any?): Boolean {
         val otherMappedIfPossible = if (other is KPythonProxy) other.getKPythonProxyBase() else other
         if (otherMappedIfPossible is PythonProxyObject) {

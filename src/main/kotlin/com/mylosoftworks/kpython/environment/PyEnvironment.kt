@@ -18,7 +18,7 @@ import java.lang.reflect.Proxy
 import java.nio.file.Paths
 import kotlin.io.path.Path
 
-class PythonException(message: String) : RuntimeException(message)
+class PythonException(message: String, val pyObj: PythonProxyObject) : RuntimeException(message)
 
 /**
  * Represents a python environment, only one can exist at a time per process currently.
@@ -357,23 +357,29 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
 
 
     class PyKotlinFunction(val env: PyEnvironment, val function: FunctionCallParams.() -> Any?) : PythonEngineInterface.PyCFunctionWithKwargs {
-        override fun invoke(self: PyObject?, args: PyObject?, kwargs: PyObject?): PyObject {
-            return env.convertTo(
-                function(
-                    FunctionCallParams(
-                        self?.let {
-                            env.createProxyObject(it)
-                                  } ?: env.None,
-                        args?.let {
-                            env.createProxyObject(it).asInterface<PyTuple>()
-                        } ?: env.EmptyTuple.asInterface<PyTuple>(),
-                        kwargs?.let {
-                            env.createProxyObject(it).asInterface<PyDict>()
-                        } ?: env.EmptyDict.asInterface<PyDict>(),
-                        env
+        override fun invoke(self: PyObject?, args: PyObject?, kwargs: PyObject?): PyObject? {
+            try {
+                return env.convertTo(
+                    function(
+                        FunctionCallParams(
+                            self?.let {
+                                env.createProxyObject(it)
+                            } ?: env.None,
+                            args?.let {
+                                env.createProxyObject(it).asInterface<PyTuple>()
+                            } ?: env.EmptyTuple.asInterface<PyTuple>(),
+                            kwargs?.let {
+                                env.createProxyObject(it).asInterface<PyDict>()
+                            } ?: env.EmptyDict.asInterface<PyDict>(),
+                            env
+                        )
                     )
-                )
-            ).obj
+                ).obj
+            }
+            catch (e: PythonException) {
+                env.quickAccess.pyError(e.pyObj) // Sets the error
+                return null // Indicates an error occurred
+            }
         }
     }
 
@@ -671,7 +677,7 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
             }
         }
 
-        fun errorOccurred(): String? {
+        fun errorOccurred(): PythonException? {
             val pType = PythonEngineInterface.DoublePointer(null)
             val pValue = PythonEngineInterface.DoublePointer(null)
             val pTraceback = PythonEngineInterface.DoublePointer(null)
@@ -679,24 +685,45 @@ class PyEnvironment internal constructor(internal val engine: PythonEngineInterf
             engine.PyErr_Fetch(pType, pValue, pTraceback) // Stores values, or nullpointers if not
 
             return pValue.pointer?.let { createProxyObject(it, GCBehavior.ONLY_DEC) }
-                ?.let { import("traceback").invokeMethod("format_exception", it) }?.asInterface<PyList>()?.let {
+                ?.let { PythonException(it.let { import("traceback").invokeMethod("format_exception", it) }.asInterface<PyList>().let {
                     val jvmList = ArrayList<String>()
                     it.iterator().forEach {
                         jvmList.add(it.toString().replace("\\n", "\n"))
                     }
                     jvmList.joinToString("", prefix = "\n")
-                }
+                }, it) }
+
         }
 
         fun autoError() {
-            errorOccurred()?.let { throw PythonException(it.toString()) }
+            errorOccurred()?.let { throw it }
         }
 
         fun throwAutoError(): Nothing {
-            throw PythonException(errorOccurred().toString())
+            throw errorOccurred()!!
+        }
+
+        fun pyError(error: PythonProxyObject): ErrorIndicator { // Throw an error on the python side
+            engine.PyErr_SetObject(error["__class__"].obj, error.obj)
+
+            return ErrorIndicator()
+        }
+
+        fun readByteArray(o: PythonProxyObject): ByteArray {
+            val size = engine.PyByteArray_Size(o.obj)
+            val base = engine.PyByteArray_AsString(o.obj) ?: throwAutoError()
+
+            val byteArray = base.getByteArray(0, size.toInt())
+
+            return byteArray
         }
     }
 }
+
+/**
+ * Class used to indicate that an error occurred during the function call.
+ */
+class ErrorIndicator
 
 fun String.toPython(env: PyEnvironment): PythonProxyObject {
     return env.convertTo(this)

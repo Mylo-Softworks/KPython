@@ -6,7 +6,7 @@ import com.mylosoftworks.kpython.internal.engine.pythondefs.PyTypeObject
 import com.mylosoftworks.kpython.internal.engine.pythondefs.Py_ssize_t
 import com.sun.jna.*
 import com.sun.jna.ptr.PointerByReference
-
+import java.awt.Point
 
 
 internal interface PythonEngineInterface : Library {
@@ -184,8 +184,13 @@ internal interface PythonEngineInterface : Library {
     fun PyType_GetSlot(type: PyTypeObject, slot: Int): Pointer
 
     // Errors
-    fun PyErr_GetRaisedException(): PyObject?
-    fun PyErr_Fetch(pType: DoublePointer, pValue: DoublePointer, pTraceback: DoublePointer)
+    fun PyErr_GetRaisedException(): PyObject? // 3.12 only
+    fun PyErr_Fetch(pType: DoublePointer, pValue: DoublePointer, pTraceback: DoublePointer) // 3+, deprecated in 3.12
+    fun PyErr_SetObject(type: PyObject, value: PyObject)
+
+    // Byte[]
+    fun PyByteArray_Size(pyObject: PyObject): Long
+    fun PyByteArray_AsString(pyObject: PyObject): Pointer?
 
     companion object // Uses extension methods just in case
 }
