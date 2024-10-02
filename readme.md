@@ -1,11 +1,22 @@
 # KPython
-Embed python inside of Kotlin/JVM applications.
+Embed [cpython](https://github.com/python/cpython) inside of [Kotlin/JVM](https://github.com/JetBrains/kotlin) applications, using [JNA](https://github.com/java-native-access/jna).
+> KPython is an early project. Expect bugs.  
+> Bugs should be reported in the [issues](https://github.com/Mylo-Softworks/KPython/issues) section of this project.
 
 ## How?
-By using CPython's api through JNA, this allows us to embed a full CPython interpreter in our project.
+By using CPython's api through JNA, this allows us to embed a full CPython interpreter in our Kotlin/JVM projects.
 
 ## How can I use this?
 KPython uses CPython through its library, for python 3.12, this is python312.dll on Windows, and libpython3.12.so on Linux.
+
+## Summary of features
+* Run Python code from Kotlin
+* Give Kotlin code to Python as a function
+* Convert Python types to Kotlin
+* Convert Kotlin types to Python
+* Add a Kotlin "Frontend" to a python backend, for use with python libraries such as pytorch, tensorflow, numpy, etc.
+* Proxied access to python objects using `PythonProxyObject` instances.
+* Proxied type-safe access to python objects using interfaces extending `KPythonProxy`.
 
 ## Features
 
