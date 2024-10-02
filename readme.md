@@ -42,7 +42,7 @@ Some types can be converted automatically between Kotlin and Python, these types
 
 ### Kotlin functions
 Kotlin functions are used to execute kotlin code from python, no automatic conversion exists, but there are many ways to create them.  
-[see more](readme/KotlinFunctions)
+[see more](readme/KotlinFunctions.md)
 
 ### Compatibility with file scripts
 A few methods exist to support relative imports from python. Getting and setting argv is also supported.  
