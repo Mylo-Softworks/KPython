@@ -1,3 +1,4 @@
+[![](https://www.jitpack.io/v/Mylo-Softworks/KPython.svg)](https://www.jitpack.io/#Mylo-Softworks/KPython)
 # KPython
 Embed [cpython](https://github.com/python/cpython) inside of [Kotlin/JVM](https://github.com/JetBrains/kotlin) applications, using [JNA](https://github.com/java-native-access/jna).
 > KPython is an early project. Expect bugs.  
